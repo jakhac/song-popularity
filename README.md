@@ -1,6 +1,6 @@
 # song-popularity
 
-Tool for predicting a song's popularity
+Data science approach to predict a song's popularity
 
 ## Instructions
 
@@ -11,7 +11,7 @@ Instructions for development
 In the root directory of the project
 
 ```
-virualenv venv
+virtualenv venv
 ```
 
 and then activate it with
@@ -39,3 +39,7 @@ pip freeze > requirements.txt
 ```
 
 in the root directory.
+
+### Create `.env` file
+
+Create a file called `.env` containing environment variables such as passwords or private access tokens. This file will not be tracked in the repository.
