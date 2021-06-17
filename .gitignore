@@ -6,7 +6,11 @@ __pycache__/
 # C extensions
 *.so
 
-./venv
+# Custom logs
+logs/
+
+# Vscode
+./vscode
 
 # Distribution / packaging
 .Python
