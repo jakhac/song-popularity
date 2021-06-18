@@ -10,7 +10,7 @@ __pycache__/
 logs/
 
 # Vscode
-./vscode
+.vscode
 
 # Distribution / packaging
 .Python
