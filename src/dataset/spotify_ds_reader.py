@@ -15,7 +15,7 @@ def read_tracks_csv():
 
     skipped_tracks = []
 
-    tracks_csv_path = os.getenv("DATA_PATH") + "/datasets/spotify/tracks.csv"
+    tracks_csv_path = os.getenv("DATA_PATH") + "\\datasets\\spotify\\tracks.csv"
     with open(tracks_csv_path, encoding="utf-8") as tracks_csv:
         # read raw label data
         tracks_reader = csv.reader(tracks_csv)
@@ -46,7 +46,7 @@ def read_artists_csv():
 
     skipped_artists = []
 
-    artists_csv_path = os.getenv("DATA_PATH") + "/datasets/spotify/artists.csv"
+    artists_csv_path = os.getenv("DATA_PATH") + "\\datasets\\spotify\\artists.csv"
     with open(artists_csv_path, encoding="utf-8") as artists_csv:
         # read raw label data
         artists_reader = csv.reader(artists_csv)
