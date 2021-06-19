@@ -12,6 +12,12 @@ logs/
 # Vscode
 .vscode
 
+# spotify csv datasets
+data/datasets/spotify/*.csv
+# database binaries
+data/databases/binaries/*.db
+
+
 # Distribution / packaging
 .Python
 build/

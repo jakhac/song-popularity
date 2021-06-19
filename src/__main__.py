@@ -1,9 +1,16 @@
 import logging
 import logging.config
+import os
 import sys
 
+from dotenv import load_dotenv
+
+from .database.db_setup import create_db
+from .dataset.lyrics_getter import connect_to_api, run_lyrics_getter
+from .dataset.spotify_ds_reader import read_artists_csv, read_tracks_csv
 from .logging_config import LOGGING_CONFIG
-from .lyrics_dataset.lyrics_api import connect_to_api, run_lyrics_getter
+
+load_dotenv()
 
 logging.config.dictConfig(LOGGING_CONFIG)
 
@@ -24,6 +31,13 @@ def main():
     # get script arguments
     args = sys.argv[2:]
 
+    # check if DATA_PATH env has been defined
+    if os.getenv("DATA_PATH") is None:
+        log.critical(
+            "Undefined DATA_PATH environmental variable. Define DATA_PATH in .env file."
+        )
+        exit(1)
+
     if len(args) == 0:
         log.info("No command line arguments passed")
     else:
@@ -39,6 +53,18 @@ def main():
         else:
             log.info("Calling script 'run_lyrics_getter'")
             run_lyrics_getter()
+    elif script == "read_artists_csv":
+        log.info("Calling script 'read_artists_csv'")
+        read_artists_csv()
+    elif script == "read_tracks_csv":
+        log.info("Calling script 'read_tracks_csv'")
+        read_tracks_csv()
+    elif script == "create_db":
+        if len(args) != 0:
+            log.info(f"Calling script 'create_db' with argument '{args[0]}'")
+            create_db(str(args[0]))
+        else:
+            log.critical("No arguments specified for script 'create_db'")
     else:
         log.critical(f"Unknown script '{script}', exiting program.")
         exit(1)
