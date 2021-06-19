@@ -108,7 +108,7 @@ def insert_genres(genres: List[str], cnx: sqlite3.Connection, cursor: sqlite3.Cu
 
     query_exist = """
         SELECT * FROM genres AS g
-        WHERE g.name == ?;
+        WHERE g.name == (?);
     """
 
     query_insert = """
@@ -119,15 +119,16 @@ def insert_genres(genres: List[str], cnx: sqlite3.Connection, cursor: sqlite3.Cu
     for g in genres:
         # check if genre exists
         try:
-            genre_exists = cursor.execute(query_exist, g)
+            cursor.execute(query_exist, [g])
+            genre_exists = True if cursor.fetchall() else False
         except sqlite3.Error as err:
             log.error(f"Failed querying genre {g}: {err}")
             raise err
 
-        # if genre does not exists, add to table
+        # if genre does NOT exists, add to table
         if not genre_exists:
             try:
-                cursor.execute(query_insert, g)
+                cursor.execute(query_insert, [g])
                 cnx.commit()
             except sqlite3.Error as err:
                 log.error(f"Failed inserting genre {g}: {err}")

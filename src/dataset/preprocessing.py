@@ -39,12 +39,17 @@ def process_artist_row(artist_row: List[str]) -> Optional[Tuple[List[str], List[
     Returns:
          Optional[Tuple[List[str], List[str]]]: (processed artist row, genres)
     """
+
     if not artist_row or len(artist_row) != 5:
         log.warn(f"Invalid artist row: row is NoneType, empty or has not 5 values")
         return
 
+    # Convert string into list of strings
+    genres = (artist_row[2])[1:-1].split(",")
+    genres = [g.replace("'", "").replace('"', "").strip() for g in genres]
+    genres = list(filter(None, genres))
+
     # remove genres from row
-    genres = []
-    genres.extend(artist_row.pop(2))
+    artist_row.pop(2)
 
     return (artist_row, genres)
