@@ -11,7 +11,7 @@ def read_tracks_csv():
     """Reads tracks.csv and inserts into spotify_ds db."""
 
     # connect to db
-    cnx, cursor = db.connect("spotify_ds")
+    cnx, cursor = db.connect_to_db("spotify_ds")
 
     skipped_tracks = []
 
@@ -42,7 +42,7 @@ def read_artists_csv():
     """Reads artists.csv and inserts into spotify_ds db."""
 
     # connect to db
-    cnx, cursor = db.connect("spotify_ds")
+    cnx, cursor = db.connect_to_db("spotify_ds")
 
     skipped_artists = []
 

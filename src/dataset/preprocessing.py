@@ -20,7 +20,7 @@ def process_track_row(track_row: List[str]) -> Optional[List[str]]:
         return
 
     # set primary_artist_id to first from artists_id list
-    track_row[6] = track_row[6][0]
+    track_row[6] = track_row[6][1:-1].split(",")[0].replace("'", "")
 
     # extract release year from date with format (YYYY-MM-DD) to (YYYY)
     track_row[7] = track_row[7][:4]

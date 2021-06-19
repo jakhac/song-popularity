@@ -5,6 +5,7 @@ import sys
 
 from dotenv import load_dotenv
 
+from .database.db_backup import dump_db, load_db_dump
 from .database.db_setup import create_db
 from .dataset.lyrics_getter import connect_to_api, run_lyrics_getter
 from .dataset.spotify_ds_reader import read_artists_csv, read_tracks_csv
@@ -59,6 +60,18 @@ def main():
     elif script == "read_tracks_csv":
         log.info("Calling script 'read_tracks_csv'")
         read_tracks_csv()
+    elif script == "dump_db":
+        if len(args) != 0:
+            log.info(f"Calling script 'dump_db' with argument '{args[0]}'")
+            dump_db(str(args[0]))
+        else:
+            log.critical("No arguments specified for script 'dump_db'")
+    elif script == "load_db":
+        if len(args) != 0:
+            log.info(f"Calling script 'load_db' with argument '{args[0]}'")
+            load_db_dump(str(args[0]))
+        else:
+            log.critical("No arguments specified for script 'load_db'")
     elif script == "create_db":
         if len(args) != 0:
             log.info(f"Calling script 'create_db' with argument '{args[0]}'")

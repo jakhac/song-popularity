@@ -1,4 +1,3 @@
-import csv
 import logging
 import os
 import sqlite3
@@ -83,7 +82,7 @@ def create_db(db_name: str):
         log.critical(f"Failed creating database: db_name is None")
         exit(1)
 
-    db_path = os.getenv("DATA_PATH") + "/databases/binaries/" + db_name + ".db"
+    db_path = os.getenv("DATA_PATH") + "\\databases\\binaries\\" + db_name + ".db"
 
     # check if db already exists
     if os.path.exists(db_path):

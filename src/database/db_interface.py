@@ -8,7 +8,7 @@ from ..dataset.preprocessing import process_artist_row, process_track_row
 log = logging.getLogger("db")
 
 
-def connect(db_name: str) -> Tuple[sqlite3.Connection, sqlite3.Cursor]:
+def connect_to_db(db_name: str) -> Tuple[sqlite3.Connection, sqlite3.Cursor]:
     """Connects to the database and returns the connection and the cursor.
 
     Raises:
@@ -17,7 +17,7 @@ def connect(db_name: str) -> Tuple[sqlite3.Connection, sqlite3.Cursor]:
     Returns:
         Tuple[sqlite3.Connection, sqlite3.Cursor]: connection and cursor
     """
-    db_path = os.getenv("DATA_PATH") + "/databases/binaries/" + db_name + ".db"
+    db_path = os.getenv("DATA_PATH") + "\\databases\\binaries\\" + db_name + ".db"
 
     if not os.path.exists(db_path):
         log.critical(
