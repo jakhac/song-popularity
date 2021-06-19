@@ -69,6 +69,19 @@ TABLES[
     );
     """
 
+TABLES[
+    "lyric_scores"
+] = """CREATE TABLE lyric_scores 
+    (
+        song_id TEXT,
+        word_count INT,
+        diversity REAL,
+        repition REAL,
+        PRIMARY KEY (song_id),
+        FOREIGN KEY (song_id) REFERENCES tracks(id)
+    );
+    """
+
 
 def create_db(db_name: str):
     """Creates a new database with the specified name if not exists.

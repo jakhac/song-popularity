@@ -17,7 +17,7 @@ def connect_to_db(db_name: str) -> Tuple[sqlite3.Connection, sqlite3.Cursor]:
     Returns:
         Tuple[sqlite3.Connection, sqlite3.Cursor]: connection and cursor
     """
-    db_path = os.getenv("DATA_PATH") + "\\databases\\binaries\\" + db_name + ".db"
+    db_path = os.getenv("DATA_PATH") + "\\databases\\binaries\\" + str(db_name) + ".db"
 
     if not os.path.exists(db_path):
         log.critical(
@@ -136,3 +136,7 @@ def insert_genres(genres: List[str], cnx: sqlite3.Connection, cursor: sqlite3.Cu
                 raise err
             else:
                 log.info(f"Inserted genre {g}")
+
+
+def insert_lyric_scores(lyric_scores: List[str], cursor: sqlite3.Cursor):
+    pass

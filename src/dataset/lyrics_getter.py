@@ -2,8 +2,11 @@ import json
 import logging
 import logging.config
 import os
+import sqlite3
+from typing import List
 
 import lyricsgenius as api
+from ..database import db_interface as db
 
 log = logging.getLogger("lyrics")
 
@@ -73,7 +76,6 @@ def store_song_lyrics(song: str, artist: str, lyrics: str) -> None:
     else:
         log.info(f"Skipping already existing song {song} of artist {artist}")
 
-
 def lyrics_dict_to_json(file_name: str) -> None:
     """Saves the lyrics_dict as a .json file.
 
@@ -94,26 +96,57 @@ def lyrics_dict_to_json(file_name: str) -> None:
         log.info(f"Stored lyrics_dict in file at {lyrics_json_path}")
 
 
+def get_song_list(cnx: sqlite3.Connection, cursor: sqlite3.Cursor) -> List[List[str]]:
+    """Query db and return for list of (song_id, song_name, song_artist) tuples.
+
+    Args:
+        cnx (sqlite3.Connection): the connection to the db
+        cursor (sqlite3.Cursor): the cursor of the db
+
+    Raises:
+        Error: unknown error during sql query execution
+    """
+
+    query = """
+        SELECT tracks.id, tracks.name, artists.name
+        FROM tracks
+        INNER JOIN artists ON tracks.primary_artist_id == artists.id
+    """
+
+    try:
+        cursor.execute(query)
+        cnx.commit()
+        return cursor.fetchall()
+
+    except sqlite3.Error as err:
+        log.error(f"Failed to query all songs in table tracks: {err}")
+        cnx.rollback()
+        raise err
+
+    return []
+
 def run_lyrics_getter(file_name: str) -> None:
-    """Get lyrics for tracks from spotfiy_ds and store them in .json file.
+    """Get lyrics for all tracks in spotfiy_ds and store them in .json file.
 
     Args:
         file_name (str): name of the .json file
     """
-    raise NotImplementedError
+
     # main entry
-    # connect_to_api()
+    connect_to_api()
+    cnx, cursor = db.connect_to_db("test_db") # temporary hardcoded db name
 
-    # get (song, primary_artist) list from spotify ds
+    # query db to get list of all (song_id, song_name, artist) tuples
+    song_list = get_song_list(cnx, cursor)
+    print(song_list[0])
 
-    # for loop
     # get lyrics for each song
+    for song in song_list:
+        lyrics = get_song_lyrics(song[1], song[2])
 
-    # song_name = "Never Say Never"
-    # song_artist = "Jaden"
-    # lyrics = get_song_lyrics(song_name, song_artist)
+        # TODO check for valid lyrics, type, encoding ...
 
-    # store_song_lyrics(song_name, song_artist, lyrics)
+        store_song_lyrics(song[1], song[2], lyrics)
 
-    # lyrics_dict_to_json(file_name)
-    # -> \data\datasets\lyrics\file_name.json
+    # store in -> \data\datasets\lyrics\file_name.json
+    lyrics_dict_to_json(file_name)

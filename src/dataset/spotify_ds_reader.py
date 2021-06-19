@@ -7,11 +7,11 @@ from ..database import db_interface as db
 log = logging.getLogger("dataset")
 
 
-def read_tracks_csv():
+def read_tracks_csv(db_name: str):
     """Reads tracks.csv and inserts into spotify_ds db."""
 
     # connect to db
-    cnx, cursor = db.connect_to_db("spotify_ds")
+    cnx, cursor = db.connect_to_db(db_name)
 
     skipped_tracks = []
 
@@ -38,11 +38,11 @@ def read_tracks_csv():
     log.info("Completed reading tracks.csv")
 
 
-def read_artists_csv():
+def read_artists_csv(db_name: str):
     """Reads artists.csv and inserts into spotify_ds db."""
 
     # connect to db
-    cnx, cursor = db.connect_to_db("spotify_ds")
+    cnx, cursor = db.connect_to_db(db_name)
 
     skipped_artists = []
 

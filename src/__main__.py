@@ -55,11 +55,11 @@ def main():
             log.info("Calling script 'run_lyrics_getter'")
             run_lyrics_getter()
     elif script == "read_artists_csv":
-        log.info("Calling script 'read_artists_csv'")
-        read_artists_csv()
+        log.info(f"Calling script 'read_artists_csv' with argument '{args[0]}'")
+        read_artists_csv(str(args[0]))
     elif script == "read_tracks_csv":
-        log.info("Calling script 'read_tracks_csv'")
-        read_tracks_csv()
+        log.info(f"Calling script 'read_tracks_csv' with argument '{args[0]}'")
+        read_tracks_csv(str(args[0]))
     elif script == "dump_db":
         if len(args) != 0:
             log.info(f"Calling script 'dump_db' with argument '{args[0]}'")
