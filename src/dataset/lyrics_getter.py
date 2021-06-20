@@ -4,9 +4,10 @@ import logging.config
 import os
 import sqlite3
 from typing import List
-from langdetect import detect
 
 import lyricsgenius as api
+from langdetect import detect
+
 from ..database import db_interface as db
 from ..dataset import lyrics_preprocessing as lp
 
@@ -52,10 +53,10 @@ def get_song_lyrics(song_title: str, artist: str) -> str:
     # get lyrics from song object
     try:
         lyrics = song.lyrics
-        return lyrics
     except Exception as err:
         log.error(f"Failed getting lyrics for song {song_title}: {err}")
         raise err
+    return lyrics
 
 
 def store_song_lyrics_to_dict(song: str, artist: str, lyrics: str) -> None:
@@ -119,14 +120,12 @@ def get_song_list(cnx: sqlite3.Connection, cursor: sqlite3.Cursor) -> List[List[
     try:
         cursor.execute(query)
         cnx.commit()
-        return cursor.fetchall()
-
+        results = cursor.fetchall()
     except sqlite3.Error as err:
         log.error(f"Failed to query all songs in table tracks: {err}")
         cnx.rollback()
         raise err
-
-    return []
+    return results
 
 
 def run_lyrics_getter(file_name: str) -> None:
@@ -138,7 +137,7 @@ def run_lyrics_getter(file_name: str) -> None:
 
     # main entry
     connect_to_api()
-    cnx, cursor = db.connect_to_db("test_db") # temporary hardcoded db name
+    cnx, cursor = db.connect_to_db("test_db")  # temporary hardcoded db name
 
     # query db to get list of all (song_id, song_name, artist) tuples
     song_list = get_song_list(cnx, cursor)
@@ -153,7 +152,7 @@ def run_lyrics_getter(file_name: str) -> None:
             continue
 
         # clean lyrics
-        lyrics = lp.clean_lyrics(lyrics)        
+        lyrics = lp.clean_lyrics(lyrics)
         store_song_lyrics_to_dict(song[1], song[2], lyrics)
 
     # store in -> \data\datasets\lyrics\file_name.json
