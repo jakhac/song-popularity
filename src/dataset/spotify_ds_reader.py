@@ -28,7 +28,7 @@ def read_tracks_csv(db_name: str):
             try:
                 db.insert_track(row, cnx, cursor)
             except Exception as err:
-                log.error(f"Skipping track with id {row[0]} due to error: {err}")
+                log.warning(f"Skipping track with id {row[0]} due to error: {err}")
                 skipped_tracks.append(row)
                 continue
 
@@ -59,7 +59,7 @@ def read_artists_csv(db_name: str):
             try:
                 db.insert_artist(row, cnx, cursor)
             except Exception as err:
-                log.error(f"Skipping artist with id {row[0]} due to error: {err}")
+                log.warning(f"Skipping artist with id {row[0]} due to error: {err}")
                 skipped_artists.append(row)
                 continue
 

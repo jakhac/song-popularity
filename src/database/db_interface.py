@@ -78,6 +78,7 @@ def insert_artist(row: List, cnx: sqlite3.Connection, cursor: sqlite3.Cursor):
         INSERT INTO artists 
         VALUES (?, ?, ?, ?);
     """
+
     try:
         cursor.execute(query, processed_row)
         cnx.commit()
@@ -89,6 +90,9 @@ def insert_artist(row: List, cnx: sqlite3.Connection, cursor: sqlite3.Cursor):
 
     # insert genres
     insert_genres(genres, cnx, cursor)
+
+    # insert artist-genres mappings
+    insert_artist_genres(processed_row[0], genres, cnx, cursor)
 
 
 def insert_genres(genres: List[str], cnx: sqlite3.Connection, cursor: sqlite3.Cursor):
@@ -136,6 +140,25 @@ def insert_genres(genres: List[str], cnx: sqlite3.Connection, cursor: sqlite3.Cu
                 raise err
             else:
                 log.info(f"Inserted genre {g}")
+
+
+def insert_artist_genres(song_artist_id: str, genres: List[str], cnx: sqlite3.Connection, cursor: sqlite3.Cursor):
+
+    query = """
+        INSERT INTO artist_genres
+        VALUES(?, ?);
+    """
+
+    for g in genres:
+        try:
+            cursor.execute(query, (song_artist_id, g))
+            cnx.commit()
+            log.info(f"Inserted ({song_artist_id}, {g})")
+        except sqlite3.Error as err:
+            log.error(f"Failed inserting ({song_artist_id}, {g}): {err}")
+            cnx.rollback()
+            continue
+
 
 
 def insert_lyric_scores(lyric_scores: List[str], cursor: sqlite3.Cursor):

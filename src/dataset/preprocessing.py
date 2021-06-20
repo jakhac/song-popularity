@@ -1,4 +1,7 @@
+import re
 import logging
+from langdetect import detect
+
 from typing import List, Optional, Tuple
 
 log = logging.getLogger("preprocessing")
@@ -21,7 +24,6 @@ def process_track_row(track_row: List[str]) -> Optional[List[str]]:
 
     # set primary_artist_id to first from artists_id list
     track_row[6] = track_row[6][1:-1].split(",")[0].replace("'", "")
-    # ['3BiJGZsyX9sJchTqcSA7Su', '3HqN7Sq7rmpOEI9UV5ERuz', '6lXiGaWjISZnER53ZJe6QO']
 
     # extract release year from date with format (YYYY-MM-DD) to (YYYY)
     track_row[7] = track_row[7][:4]
@@ -53,3 +55,38 @@ def process_artist_row(artist_row: List[str]) -> Optional[Tuple[List[str], List[
     artist_row.pop(2)
 
     return (artist_row, genres)
+
+
+def valid_lyrics(lyrics: str) -> str:
+    """Check if lyrics are valid. Valid lyrics are from type str and english.
+
+    Args:
+        lyrics (str): the lyrics of the song
+
+    Returns:
+        (bool): True if lyrics are valid, else False
+    """
+    # type string?
+    if not isinstance(lyrics, str):
+        return False
+
+    # lang english?
+    if detect(lyrics) != "en":
+        return False
+
+    return True
+
+
+def clean_lyrics(lyrics: str) -> str:
+    """Remove special tokens from lyrics
+
+    Args:
+        lyrics (str): the lyrics of the song
+
+    Returns:
+        (str): cleaned lyrics
+    """
+
+    # Remove special tokens
+    pattern = re.compile("/\[(\w|\s)*\]/g")
+    return re.sub(pattern, str.replace, str(lyrics))
