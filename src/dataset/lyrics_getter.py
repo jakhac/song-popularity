@@ -4,9 +4,11 @@ import logging.config
 import os
 import sqlite3
 from typing import List
+from langdetect import detect
 
 import lyricsgenius as api
 from ..database import db_interface as db
+from ..dataset import lyrics_preprocessing as lp
 
 log = logging.getLogger("lyrics")
 
@@ -56,7 +58,7 @@ def get_song_lyrics(song_title: str, artist: str) -> str:
         raise err
 
 
-def store_song_lyrics(song: str, artist: str, lyrics: str) -> None:
+def store_song_lyrics_to_dict(song: str, artist: str, lyrics: str) -> None:
     """Stores the song with its artist and lyrics in the dict.
 
     Args:
@@ -75,6 +77,7 @@ def store_song_lyrics(song: str, artist: str, lyrics: str) -> None:
         log.info(f"Stored song {song} of artist {artist} in dict")
     else:
         log.info(f"Skipping already existing song {song} of artist {artist}")
+
 
 def lyrics_dict_to_json(file_name: str) -> None:
     """Saves the lyrics_dict as a .json file.
@@ -125,6 +128,7 @@ def get_song_list(cnx: sqlite3.Connection, cursor: sqlite3.Cursor) -> List[List[
 
     return []
 
+
 def run_lyrics_getter(file_name: str) -> None:
     """Get lyrics for all tracks in spotfiy_ds and store them in .json file.
 
@@ -138,15 +142,19 @@ def run_lyrics_getter(file_name: str) -> None:
 
     # query db to get list of all (song_id, song_name, artist) tuples
     song_list = get_song_list(cnx, cursor)
-    print(song_list[0])
 
     # get lyrics for each song
     for song in song_list:
         lyrics = get_song_lyrics(song[1], song[2])
 
-        # TODO check for valid lyrics, type, encoding ...
+        # check for language, type, (encoding?)
+        if not lp.valid_lyrics(lyrics):
+            # TODO delete from spotify_db?
+            continue
 
-        store_song_lyrics(song[1], song[2], lyrics)
+        # clean lyrics
+        lyrics = lp.clean_lyrics(lyrics)        
+        store_song_lyrics_to_dict(song[1], song[2], lyrics)
 
     # store in -> \data\datasets\lyrics\file_name.json
     lyrics_dict_to_json(file_name)
