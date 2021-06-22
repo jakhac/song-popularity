@@ -61,6 +61,32 @@ def insert_track(row: List, cnx: sqlite3.Connection, cursor: sqlite3.Cursor):
     log.info(f"Inserted track with name {row[1]}")
 
 
+def insert_filtered_track(row: List, cnx: sqlite3.Connection, cursor: sqlite3.Cursor):
+    """Inserts a new track into the db (filtered_tracks).
+
+    Args:
+        row (List): list representing a read line of csv file
+        cnx (sqlite3.Connection): the connection to the db
+        cursor (sqlite3.Cursor): the cursor of the db
+
+    Raises:
+        Error: unknown error during sql query execution
+    """
+
+    query = """
+        INSERT INTO tracks_filtered 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    """
+    try:
+        cursor.execute(query, row)
+        cnx.commit()
+    except sqlite3.Error as err:
+        log.error(f"Failed inserting track with name {row[1]}: {err}")
+        cnx.rollback()
+        raise err
+    log.info(f"Inserted track with name {row[1]}")
+
+
 def insert_artist(row: List, cnx: sqlite3.Connection, cursor: sqlite3.Cursor):
     """Inserts a new artist and if necessary new genres into the db.
 
@@ -142,7 +168,12 @@ def insert_genres(genres: List[str], cnx: sqlite3.Connection, cursor: sqlite3.Cu
                 log.info(f"Inserted genre {g}")
 
 
-def insert_artist_genres(song_artist_id: str, genres: List[str], cnx: sqlite3.Connection, cursor: sqlite3.Cursor):
+def insert_artist_genres(
+    song_artist_id: str,
+    genres: List[str],
+    cnx: sqlite3.Connection,
+    cursor: sqlite3.Cursor,
+):
 
     query = """
         INSERT INTO artist_genres
@@ -158,7 +189,6 @@ def insert_artist_genres(song_artist_id: str, genres: List[str], cnx: sqlite3.Co
             log.error(f"Failed inserting ({song_artist_id}, {g}): {err}")
             cnx.rollback()
             continue
-
 
 
 def insert_lyric_scores(lyric_scores: List[str], cursor: sqlite3.Cursor):

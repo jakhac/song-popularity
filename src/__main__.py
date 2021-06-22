@@ -9,6 +9,7 @@ from .database.db_backup import dump_db, load_db_dump
 from .database.db_setup import create_db
 from .dataset.lyrics_getter import connect_to_api, run_lyrics_getter
 from .dataset.spotify_ds_reader import read_artists_csv, read_tracks_csv
+from .dataset.preprocessing import filter_tracks
 from .logging_config import LOGGING_CONFIG
 
 load_dotenv()
@@ -78,6 +79,9 @@ def main():
             create_db(str(args[0]))
         else:
             log.critical("No arguments specified for script 'create_db'")
+    elif script == "filter_tracks":
+        log.info(f"Calling script 'filter_tracks'")
+        filter_tracks()
     else:
         log.critical(f"Unknown script '{script}', exiting program.")
         exit(1)
