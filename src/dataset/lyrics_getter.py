@@ -104,6 +104,31 @@ def lyrics_dict_to_json(file_name: str) -> None:
         )
 
 
+def store_lyrics_to_txt(song_id: str, lyrics: str):
+    """Saves the lyrics in .txt file, if not exists. Filename is song_id.
+
+    Args:
+        song_id (str): song_id, used as name of the json file
+        lyrics (str): lyrics of song to store
+    """
+
+    # path to target json
+    lyrics_file_path = (
+        os.getenv("DATA_PATH") + "\\datasets\\lyrics\\" + song_id + ".txt"
+    )
+
+    # skip if already stored
+    if os.path.isfile(lyrics_file_path):
+        log.info(f"Skipping lyrics for song_id {song_id}: File already exists.")
+        return
+
+    # write lyrics into file
+    with open(lyrics_file_path, "a", encoding="utf-8") as file:
+        # file.write(str(lyrics.encode("utf-8")))
+        file.write(lyrics)
+        log.info(f"Stored lyrics of song_id {song_id}")
+
+
 def get_song_list(cnx: sqlite3.Connection, cursor: sqlite3.Cursor) -> List[List[str]]:
     """Query db and return for list of (song_id, song_name, song_artist) tuples.
 
@@ -116,9 +141,9 @@ def get_song_list(cnx: sqlite3.Connection, cursor: sqlite3.Cursor) -> List[List[
     """
 
     query = """
-        SELECT tracks.id, tracks.name, artists.name
-        FROM tracks
-        INNER JOIN artists ON tracks.primary_artist_id == artists.id;
+        SELECT tf.id, tf.name, artists.name
+        FROM tracks_filtered AS tf
+        INNER JOIN artists ON tf.primary_artist_id == artists.id;
     """
     try:
         cursor.execute(query)
@@ -140,7 +165,7 @@ def signal_handler(sig, frame):
     """
     signal.signal(sig, signal.SIG_IGN)
     log.critical("Abort run_lyrics_getter script.")
-    lyrics_dict_to_json("abort_" + "{:%Y-%m-%d_%H-%M-%S}".format(datetime.now()))
+    # lyrics_dict_to_json("abort_" + "{:%Y-%m-%d_%H-%M-%S}".format(datetime.now()))
     sys.exit(0)
 
 
@@ -154,22 +179,21 @@ def run_lyrics_getter(file_name: str) -> None:
     # Set handler functinon for ctrl+c signal
     signal.signal(signal.SIGINT, signal_handler)
 
-    if os.path.exists(os.getenv("DATA_PATH") + "\\datasets\lyrics\\" + file_name):
-        log.critical(f"Failed getting lyrics: file {file_name} already exists.")
-        exit(1)
+    # if os.path.exists(os.getenv("DATA_PATH") + "\\datasets\lyrics\\" + file_name):
+    #     log.critical(f"Failed getting lyrics: file {file_name} already exists.")
+    #     exit(1)
 
     connect_to_api()
-    cnx, cursor = db.connect_to_db("spotify_ds")  # temporary hardcoded db name
+    cnx, cursor = db.connect_to_db("spotify_ds_filtered")  # temporary hardcoded db name
 
     # query db to get list of all (song_id, song_name, artist) tuples
     song_list = get_song_list(cnx, cursor)
 
     for song in song_list:
-
         # if lyrics already stored
-        if song[0] in lyrics_dict:
-            log.info(f"Skipping song {song}, lyrics already stored.")
-            continue
+        # if song[0] in lyrics_dict:
+        #     log.info(f"Skipping song {song}, lyrics already stored.")
+        #     continue
 
         try:
             lyrics = get_song_lyrics(song[1], song[2])
@@ -182,7 +206,8 @@ def run_lyrics_getter(file_name: str) -> None:
             continue
 
         lyrics = clean_lyrics(lyrics)
-        store_song_lyrics_in_dict(song[0], lyrics)
+        store_lyrics_to_txt(song[0], lyrics)
+        # store_song_lyrics_in_dict(song[0], lyrics)
 
     # store in -> \data\datasets\lyrics\file_name.json
-    lyrics_dict_to_json(file_name)
+    # lyrics_dict_to_json(file_name)
