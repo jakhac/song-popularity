@@ -1,10 +1,11 @@
 import logging
 import re
-from typing import List, Optional, Tuple
-
+import logging
 from langdetect import detect
 
 from ..database import db_interface as db
+
+from typing import List, Optional, Tuple
 
 log = logging.getLogger("preprocessing")
 
@@ -96,7 +97,7 @@ def clean_lyrics(lyrics: str) -> str:
 
 def filter_tracks():
     """Filter tracks from db.tracks table and store them in tracks_filtered table."""
-    cnx, cursor = db.connect_to_db("spotify_ds_filtered")
+    cnx, cursor = db.connect_to_db("spotify_ds_filtered_2")
 
     # Get list of artists with modern songs
     artists_query = """
@@ -110,13 +111,14 @@ def filter_tracks():
         SELECT *
         FROM tracks
         WHERE tracks.release_year >= 2000
-        AND tracks.primary_artist_id == ?
-        ORDER BY LENGTH(tracks.popularity) DESC;
+        AND tracks.primary_artist_id == (?)
+        ORDER BY LENGTH(tracks.name) ASC;
     """
 
     cursor.execute(artists_query)
     artist_id_list = cursor.fetchall()
     len_artists = len(artist_id_list)
+    print("Length artists ", len_artists)
 
     # For every artist that has released after 2000...
     for i in range(0, len_artists):
@@ -127,9 +129,9 @@ def filter_tracks():
         # Filter similar songs, keep highest popularity
         distinct_songs = filter_similar_song_names(song_name_list)
 
-        # [print(s) for s in song_name_list]
+        # [print(s[:3]) for s in song_name_list]
         # print("Filtered list")
-        # [print(d) for d in distinct_songs]
+        # [print(d[:3]) for d in distinct_songs]
         # print()
         # print()
 
@@ -158,37 +160,42 @@ def filter_similar_song_names(track_rows: List[List[str]]) -> List[List[str]]:
     Returns:
         List[List[str]]: the filtered list of track_rows
     """
-    # Contains the tuples of distinct song_names with maximal popularity
-    distinct_rows = []
+    best_indices = []
+    skip_indices = []
 
-    # Flag is set to true, if in cur_row "%name%" is already distinct rows
-    found_match = False
+    # For every track ...
+    for i in range(0, len(track_rows)):
 
-    # Longest strings are considered first.
-    for cur_row in track_rows:
+        # skip songs which are already considered due to similarity to a previous song
+        if i in skip_indices:
+            continue
 
-        # Try to insert current row into list of distinct rows
-        # All long strings (e.g. containing .feat) are inserted first
-        for i in range(0, len(distinct_rows)):
-            found_match = False
+        # Current song is supposed to be the best
+        best_idx = i
+        best_pop = track_rows[i][2]
 
-            # If current row is already in distinct_rows, replace entry if popularity can be
-            # improved. Later entries can still improve replacements, because strings ordered
-            # decreasing in length.
-            if cur_row[1] in distinct_rows[i][1]:
-                found_match = True
+        # For all songs ...
+        j = i + 1
+        while j < len(track_rows):
 
-                # Popularity of similar song can be improved
-                if cur_row[2] > distinct_rows[i][2]:
-                    distinct_rows[i] = cur_row
+            # ... and similar song name
+            if track_rows[i][1] in track_rows[j][1]:
 
-                break
+                # Always invalidate, as this song is considered now
+                skip_indices.append(j)
 
-        # Name of cur_row does not exist in distinct_rows yet
-        if not found_match:
-            distinct_rows.append(cur_row)
+                # Look for highest popularity among similar songs
+                if best_pop < track_rows[j][2]:
+                    best_pop = track_rows[j][2]
+                    best_idx = j
 
-    return distinct_rows
+            j += 1
+
+        # Append index with best popularity
+        best_indices.append(best_idx)
+
+    # Add entries of best indices
+    return [track_rows[i] for i in best_indices]
 
 
 def content_is_lyrics(input_content: str):

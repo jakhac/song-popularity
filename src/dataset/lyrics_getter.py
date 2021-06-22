@@ -201,6 +201,7 @@ def run_lyrics_getter(file_name: str) -> None:
             log.warning(f"Skipping song {song}, no lyrics found.")
             continue
 
+        # TODO check for length, prevent list of artists (no lyrics), english song_title?
         if not valid_lyrics(lyrics):
             log.info(f"Skipping song {song[1]}: invalid lyrics")
             continue
