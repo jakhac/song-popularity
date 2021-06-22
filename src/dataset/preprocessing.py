@@ -1,9 +1,10 @@
-import re
 import logging
-from langdetect import detect
-from ..database import db_interface as db
-
+import re
 from typing import List, Optional, Tuple
+
+from langdetect import detect
+
+from ..database import db_interface as db
 
 log = logging.getLogger("preprocessing")
 
@@ -188,3 +189,41 @@ def filter_similar_song_names(track_rows: List[List[str]]) -> List[List[str]]:
             distinct_rows.append(cur_row)
 
     return distinct_rows
+
+
+def content_is_lyrics(input_content: str):
+    """Checks if the input content is lyrics and not some kind of enumeration.
+
+    Args:
+        input_lyrics (str): the content to be checked
+
+    Returns:
+        bool: True, if the content is lyrics, otherwise False
+    """
+    if input_content is None or not isinstance(input_content, str):
+        return False
+
+    lines = input_content.splitlines()
+
+    if lines >= 300:
+        return False
+
+    invalid_lines = 0
+    valid_lines = 0
+
+    for line in lines:
+        if "-" in line:
+            invalid_lines += 1
+        elif "Psalms" in line:
+            return False
+        else:
+            # if lines does not contain '-'
+            valid_lines += 1
+
+        # checked at most 19 lines in each file
+        if invalid_lines >= 10:
+            return False
+        elif valid_lines >= 10:
+            return True
+
+    return True
