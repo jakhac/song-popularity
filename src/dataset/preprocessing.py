@@ -77,6 +77,10 @@ def valid_lyrics(lyrics: str) -> str:
     if detect(lyrics) != "en":
         return False
 
+    # string is lyrics (not list of artists, novel, ..)
+    if not content_is_lyrics(lyrics):
+        return False
+
     return True
 
 
@@ -97,7 +101,7 @@ def clean_lyrics(lyrics: str) -> str:
 
 def filter_tracks():
     """Filter tracks from db.tracks table and store them in tracks_filtered table."""
-    cnx, cursor = db.connect_to_db("spotify_ds_filtered_2")
+    cnx, cursor = db.connect_to_db("spotify_ds_filtered")
 
     # Get list of artists with modern songs
     artists_query = """
@@ -176,11 +180,10 @@ def filter_similar_song_names(track_rows: List[List[str]]) -> List[List[str]]:
 
         # For all songs ...
         j = i + 1
-        while j < len(track_rows):
+        while j < len(track_rows) and j not in skip_indices:
 
             # ... and similar song name
             if track_rows[i][1] in track_rows[j][1]:
-
                 # Always invalidate, as this song is considered now
                 skip_indices.append(j)
 
@@ -212,7 +215,7 @@ def content_is_lyrics(input_content: str):
 
     lines = input_content.splitlines()
 
-    if lines >= 300:
+    if len(lines) >= 300:
         return False
 
     invalid_lines = 0

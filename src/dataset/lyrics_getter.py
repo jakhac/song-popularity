@@ -124,9 +124,9 @@ def store_lyrics_to_txt(song_id: str, lyrics: str):
 
     # write lyrics into file
     with open(lyrics_file_path, "a", encoding="utf-8") as file:
-        # file.write(str(lyrics.encode("utf-8")))
         file.write(lyrics)
-        log.info(f"Stored lyrics of song_id {song_id}")
+
+    log.info(f"Stored lyrics of song_id {song_id}")
 
 
 def get_song_list(cnx: sqlite3.Connection, cursor: sqlite3.Cursor) -> List[List[str]]:
@@ -169,19 +169,11 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 
-def run_lyrics_getter(file_name: str) -> None:
-    """Get lyrics for all tracks in spotfiy_ds and store them in .json file.
-
-    Args:
-        file_name (str): name of the .json file
-    """
+def run_lyrics_getter() -> None:
+    """Get lyrics for all tracks in spotfiy_ds and store them in .json file."""
 
     # Set handler functinon for ctrl+c signal
     signal.signal(signal.SIGINT, signal_handler)
-
-    # if os.path.exists(os.getenv("DATA_PATH") + "\\datasets\lyrics\\" + file_name):
-    #     log.critical(f"Failed getting lyrics: file {file_name} already exists.")
-    #     exit(1)
 
     connect_to_api()
     cnx, cursor = db.connect_to_db("spotify_ds_filtered")  # temporary hardcoded db name
@@ -190,18 +182,12 @@ def run_lyrics_getter(file_name: str) -> None:
     song_list = get_song_list(cnx, cursor)
 
     for song in song_list:
-        # if lyrics already stored
-        # if song[0] in lyrics_dict:
-        #     log.info(f"Skipping song {song}, lyrics already stored.")
-        #     continue
-
         try:
             lyrics = get_song_lyrics(song[1], song[2])
         except Exception:
             log.warning(f"Skipping song {song}, no lyrics found.")
             continue
 
-        # TODO check for length, prevent list of artists (no lyrics), english song_title?
         if not valid_lyrics(lyrics):
             log.info(f"Skipping song {song[1]}: invalid lyrics")
             continue
