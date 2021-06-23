@@ -25,7 +25,7 @@ def connect_to_api() -> None:
     global genius
     log.info("Connecting to Genius API...")
     try:
-        genius = api.Genius(os.getenv("GENIUS_ACCESS_TOKEN"))
+        genius = api.Genius(os.getenv("GENIUS_ACCESS_TOKEN"), verbose=False)
     except Exception as err:
         log.critical(f"Failed connecting to Genius API: {err}")
         log.info("Exiting...")
