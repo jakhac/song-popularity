@@ -189,6 +189,7 @@ def run_lyrics_getter() -> None:
     song_list = get_song_list(cnx, cursor)
     len_songs = len(song_list)
 
+    # before invalid songs were deleted, there were 181984 songs
     for i in range(0, len(song_list)):
 
         if i % 100 == 0:
@@ -202,11 +203,13 @@ def run_lyrics_getter() -> None:
         try:
             lyrics = get_song_lyrics(song_list[i][1], song_list[i][2])
         except Exception:
-            log.warning(f"Skipping song {song_list[i]}, no lyrics found.")
+            log.warning(f"Skipping song {song_list[i][1]}, no lyrics found.")
+            db.delete_track(song_list[i][0], cnx, cursor)
             continue
 
         if not valid_lyrics(lyrics):
             log.info(f"Skipping song {song_list[i][1]}: invalid lyrics")
+            db.delete_track(song_list[i][0], cnx, cursor)
             continue
 
         lyrics = clean_lyrics(lyrics)

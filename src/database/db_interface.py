@@ -164,8 +164,8 @@ def insert_genres(genres: List[str], cnx: sqlite3.Connection, cursor: sqlite3.Cu
                 log.error(f"Failed inserting genre {g}: {err}")
                 cnx.rollback()
                 raise err
-            else:
-                log.info(f"Inserted genre {g}")
+        else:
+            log.info(f"Inserted genre {g}")
 
 
 def insert_artist_genres(
@@ -189,6 +189,28 @@ def insert_artist_genres(
             log.error(f"Failed inserting ({song_artist_id}, {g}): {err}")
             cnx.rollback()
             continue
+
+
+def delete_track(song_id: str, cnx: sqlite3.Connection, cursor: sqlite3.Cursor):
+    """Delete row with given song_id from tracks_filtered table.
+
+    Args:
+        song_id (str): id of song
+        cnx (sqlite3.Connection): the connection to the db
+        cursor (sqlite3.Cursor): the cursor of the db
+    """
+    query = """
+        DELETE FROM tracks_filtered
+        WHERE id == (?);
+    """
+
+    try:
+        cursor.execute(query, [song_id])
+        cnx.commit()
+        log.info(f"Deleting track with id {song_id}")
+    except sqlite3.Error as err:
+        log.error(f"Failed deleting track with id {song_id}: {err}")
+        cnx.rollback()
 
 
 def insert_lyric_scores(lyric_scores: List[str], cursor: sqlite3.Cursor):
