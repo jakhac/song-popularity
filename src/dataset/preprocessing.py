@@ -60,45 +60,6 @@ def process_artist_row(artist_row: List[str]) -> Optional[Tuple[List[str], List[
     return (artist_row, genres)
 
 
-def valid_lyrics(lyrics: str) -> str:
-    """Check if lyrics are valid. Valid lyrics are from type str and english.
-
-    Args:
-        lyrics (str): the lyrics of the song
-
-    Returns:
-        (bool): True if lyrics are valid, else False
-    """
-    # type string?
-    if not isinstance(lyrics, str):
-        return False
-
-    # lang english?
-    if detect(lyrics) != "en":
-        return False
-
-    # string is lyrics (not list of artists, novel, ..)
-    if not content_is_lyrics(lyrics):
-        return False
-
-    return True
-
-
-def clean_lyrics(lyrics: str) -> str:
-    """Remove special tokens from lyrics
-
-    Args:
-        lyrics (str): the lyrics of the song
-
-    Returns:
-        (str): cleaned lyrics
-    """
-
-    # Remove special tokens
-    pattern = re.compile("/\[(\w|\s)*\]/g")
-    return re.sub(pattern, str.replace, str(lyrics))
-
-
 def filter_tracks():
     """Filter tracks from db.tracks table and store them in tracks_filtered table."""
     cnx, cursor = db.connect_to_db("spotify_ds_filtered")
@@ -201,6 +162,52 @@ def filter_similar_song_names(track_rows: List[List[str]]) -> List[List[str]]:
     return [track_rows[i] for i in best_indices]
 
 
+def valid_lyrics(lyrics: str) -> str:
+    """Check if lyrics are valid. Valid lyrics are from type str and english.
+
+    Args:
+        lyrics (str): the lyrics of the song
+
+    Returns:
+        (bool): True if lyrics are valid, else False
+    """
+    # type string?
+    if lyrics is None or not isinstance(lyrics, str):
+        return False
+
+    # lang english?
+    lang = ""
+    try:
+        lang = detect(lyrics)
+    except Exception as err:
+        log.error(f'Failed to detect language of "{lyrics[:10]}" due to error {err}')
+        return False
+
+    if lang != "en":
+        return False
+
+    # string is lyrics (not list of artists, novel, ..)
+    if not content_is_lyrics(lyrics):
+        return False
+
+    return True
+
+
+def clean_lyrics(lyrics: str) -> str:
+    """Remove special tokens from lyrics
+
+    Args:
+        lyrics (str): the lyrics of the song
+
+    Returns:
+        (str): cleaned lyrics
+    """
+
+    # Remove special tokens
+    pattern = re.compile("/\[(\w|\s)*\]/g")
+    return re.sub(pattern, str.replace, str(lyrics))
+
+
 def content_is_lyrics(input_content: str):
     """Checks if the input content is lyrics and not some kind of enumeration.
 
@@ -210,24 +217,25 @@ def content_is_lyrics(input_content: str):
     Returns:
         bool: True, if the content is lyrics, otherwise False
     """
-    if input_content is None or not isinstance(input_content, str):
-        return False
 
-    lines = input_content.splitlines()
-
-    if len(lines) >= 300:
+    # Roughly above 10KB
+    if len(input_content) >= 6400:
         return False
 
     invalid_lines = 0
     valid_lines = 0
 
+    lines = input_content.splitlines()
     for line in lines:
-        if "-" in line:
+        if not len(line):
+            continue
+
+        if "-" in line or "--" in line or "–" in line:
             invalid_lines += 1
         elif "Psalms" in line:
             return False
         else:
-            # if lines does not contain '-'
+            # if lines does not contain '-' or similar
             valid_lines += 1
 
         # checked at most 19 lines in each file

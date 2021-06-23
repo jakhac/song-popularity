@@ -11,7 +11,7 @@ import sys
 import lyricsgenius as api
 
 from ..database import db_interface as db
-from ..dataset.preprocessing import valid_lyrics, clean_lyrics
+from ..dataset.preprocessing import content_is_lyrics, valid_lyrics, clean_lyrics
 
 
 log = logging.getLogger("lyrics")
@@ -50,14 +50,14 @@ def get_song_lyrics(song_title: str, artist: str) -> str:
     try:
         song = genius.search_song(song_title, artist)
     except Exception as err:
-        log.error(f"Failed getting object for song {song_title}: {err}")
+        log.warning(f"Failed getting object for song {song_title}: {err}")
         raise err
 
     # get lyrics from song object
     try:
         lyrics = song.lyrics
     except Exception as err:
-        log.error(f"Failed getting lyrics for song {song_title}: {err}")
+        log.warning(f"Failed getting lyrics for song {song_title}: {err}")
         raise err
     return lyrics
 
@@ -112,21 +112,28 @@ def store_lyrics_to_txt(song_id: str, lyrics: str):
         lyrics (str): lyrics of song to store
     """
 
-    # path to target json
+    # This lyrics path does not exist, checked in run_lyrics_getter
+    lyrics_path = os.getenv("DATA_PATH") + "\\datasets\\lyrics\\" + song_id + ".txt"
+
+    # write lyrics into file
+    with open(lyrics_path, "a", encoding="utf-8") as file:
+        file.write(lyrics)
+
+    log.info(f"Stored lyrics of song_id {song_id}")
+
+
+def lyrics_stored(song_id: str) -> bool:
+    """Check if a txt file named song_id is alread stored in lyrics folder.
+
+    Args:
+        song_id (str): song_id, used as name of the json file
+    """
     lyrics_file_path = (
         os.getenv("DATA_PATH") + "\\datasets\\lyrics\\" + song_id + ".txt"
     )
 
     # skip if already stored
-    if os.path.isfile(lyrics_file_path):
-        log.info(f"Skipping lyrics for song_id {song_id}: File already exists.")
-        return
-
-    # write lyrics into file
-    with open(lyrics_file_path, "a", encoding="utf-8") as file:
-        file.write(lyrics)
-
-    log.info(f"Stored lyrics of song_id {song_id}")
+    return os.path.isfile(lyrics_file_path)
 
 
 def get_song_list(cnx: sqlite3.Connection, cursor: sqlite3.Cursor) -> List[List[str]]:
@@ -180,21 +187,32 @@ def run_lyrics_getter() -> None:
 
     # query db to get list of all (song_id, song_name, artist) tuples
     song_list = get_song_list(cnx, cursor)
+    len_songs = len(song_list)
 
-    for song in song_list:
+    for i in range(0, len(song_list)):
+
+        if i % 100 == 0:
+            print(f"Processed: {i}/{len_songs}")
+
+        # Skip, if lyrics are already stored
+        if lyrics_stored(song_list[i][0]):
+            log.info(f"Skip lyrics for song_id {song_list[i][0]}, already stored.")
+            continue
+
         try:
-            lyrics = get_song_lyrics(song[1], song[2])
+            lyrics = get_song_lyrics(song_list[i][1], song_list[i][2])
         except Exception:
-            log.warning(f"Skipping song {song}, no lyrics found.")
+            log.warning(f"Skipping song {song_list[i]}, no lyrics found.")
             continue
 
         if not valid_lyrics(lyrics):
-            log.info(f"Skipping song {song[1]}: invalid lyrics")
+            log.info(f"Skipping song {song_list[i][1]}: invalid lyrics")
             continue
 
         lyrics = clean_lyrics(lyrics)
-        store_lyrics_to_txt(song[0], lyrics)
+        store_lyrics_to_txt(song_list[i][0], lyrics)
         # store_song_lyrics_in_dict(song[0], lyrics)
 
+    print("Finished getting all songs.")
     # store in -> \data\datasets\lyrics\file_name.json
     # lyrics_dict_to_json(file_name)
