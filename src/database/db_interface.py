@@ -61,11 +61,11 @@ def insert_track(row: List, cnx: sqlite3.Connection, cursor: sqlite3.Cursor):
     log.info(f"Inserted track with name {row[1]}")
 
 
-def insert_filtered_track(row: List, cnx: sqlite3.Connection, cursor: sqlite3.Cursor):
-    """Inserts a new track into the db (filtered_tracks).
+def insert_song_status(status: List, cnx: sqlite3.Connection, cursor: sqlite3.Cursor):
+    """Inserts a new status into the db.
 
     Args:
-        row (List): list representing a read line of csv file
+        status (List): row of tracks_status table
         cnx (sqlite3.Connection): the connection to the db
         cursor (sqlite3.Cursor): the cursor of the db
 
@@ -74,17 +74,67 @@ def insert_filtered_track(row: List, cnx: sqlite3.Connection, cursor: sqlite3.Cu
     """
 
     query = """
-        INSERT INTO tracks_filtered 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        INSERT INTO track_status
+        VALUES (?, ?, ?, ?);
     """
     try:
-        cursor.execute(query, row)
+        cursor.execute(query, status)
         cnx.commit()
     except sqlite3.Error as err:
-        log.error(f"Failed inserting track with name {row[1]}: {err}")
+        log.error(f"Failed inserting track with song id {status[0]}: {err}")
         cnx.rollback()
         raise err
-    log.info(f"Inserted track with name {row[1]}")
+    log.info(f"Inserted track with id {status[0]}")
+
+
+def update_song_status(
+    cnx: sqlite3.Connection,
+    cursor: sqlite3.Cursor,
+    song_id: str,
+    lyrics_skipped: bool = -1,
+    lyrics_stored: bool = -1,
+):
+    """Updates either lyrics_skipped or lyrics_stored, if provided. Defaults skips both.
+
+    Args:
+        song_id (str): id of the song
+        lyrics_skipped (bool): set to 1 if lyrics were skipped
+        lyrics_stored (bool): set to 1 if lyrics were stored
+        row (List): list representing a read line of csv file
+        cnx (sqlite3.Connection): the connection to the db
+        cursor (sqlite3.Cursor): the cursor of the db
+    """
+    query_skipped = f"""
+        UPDATE track_status
+        SET lyrics_skipped = {lyrics_skipped}
+        WHERE song_id == "{song_id}";
+    """
+
+    query_stored = f"""
+        UPDATE track_status
+        SET lyrics_stored = {lyrics_stored}
+        WHERE song_id == "{song_id}";
+    """
+
+    if lyrics_skipped != -1:
+        try:
+            cursor.execute(query_skipped)
+            cnx.commit()
+        except sqlite3.Error as err:
+            log.error(f"Failed updating track status with song id {song_id}: {err}")
+            cnx.rollback()
+            # TODO raise err
+        log.info(f"Updated track status with id {song_id}")
+
+    if lyrics_stored != -1:
+        try:
+            cursor.execute(query_stored)
+            cnx.commit()
+        except sqlite3.Error as err:
+            log.error(f"Failed updating track status with song id {song_id}: {err}")
+            cnx.rollback()
+            # TODO raise err
+        log.info(f"Updated track status with id {song_id}")
 
 
 def insert_artist(row: List, cnx: sqlite3.Connection, cursor: sqlite3.Cursor):
@@ -189,28 +239,6 @@ def insert_artist_genres(
             log.error(f"Failed inserting ({song_artist_id}, {g}): {err}")
             cnx.rollback()
             continue
-
-
-def delete_track(song_id: str, cnx: sqlite3.Connection, cursor: sqlite3.Cursor):
-    """Delete row with given song_id from tracks_filtered table.
-
-    Args:
-        song_id (str): id of song
-        cnx (sqlite3.Connection): the connection to the db
-        cursor (sqlite3.Cursor): the cursor of the db
-    """
-    query = """
-        DELETE FROM tracks_filtered
-        WHERE id == (?);
-    """
-
-    try:
-        cursor.execute(query, [song_id])
-        cnx.commit()
-        log.info(f"Deleting track with id {song_id}")
-    except sqlite3.Error as err:
-        log.error(f"Failed deleting track with id {song_id}: {err}")
-        cnx.rollback()
 
 
 def insert_lyric_scores(lyric_scores: List[str], cursor: sqlite3.Cursor):

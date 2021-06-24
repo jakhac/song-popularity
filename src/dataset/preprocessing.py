@@ -61,8 +61,8 @@ def process_artist_row(artist_row: List[str]) -> Optional[Tuple[List[str], List[
 
 
 def filter_tracks():
-    """Filter tracks from db.tracks table and store them in tracks_filtered table."""
-    cnx, cursor = db.connect_to_db("spotify_ds_filtered")
+    """Filter tracks from db.tracks table and add them to track_status table."""
+    cnx, cursor = db.connect_to_db("spotify_ds")
 
     # Get list of artists with modern songs
     artists_query = """
@@ -103,12 +103,13 @@ def filter_tracks():
         # Add most popular distinct songs into new table
         for d in distinct_songs:
             try:
-                db.insert_filtered_track(d, cnx, cursor)
+                # insert into filter table
+                db.insert_song_status([d[0], 1, 0, 0], cnx, cursor)
             except Exception as err:
                 log.warning(f"Skipping track with id {d[0]} due to error: {err}")
 
         # Info every 100 artists
-        if i % 100 == 0.0:
+        if i % 100 == 0:
             print(f"Processed artists: {i}/{len(artist_id_list)}")
             log.info(f"Processed artists: {i}/{len(artist_id_list)}")
 
@@ -141,7 +142,10 @@ def filter_similar_song_names(track_rows: List[List[str]]) -> List[List[str]]:
 
         # For all songs ...
         j = i + 1
-        while j < len(track_rows) and j not in skip_indices:
+        while j < len(track_rows):
+            if j in skip_indices:
+                j += 1
+                continue
 
             # ... and similar song name
             if track_rows[i][1] in track_rows[j][1]:
@@ -217,15 +221,15 @@ def content_is_lyrics(input_content: str):
     Returns:
         bool: True, if the content is lyrics, otherwise False
     """
+    lines = input_content.splitlines()
 
-    # Roughly above 10KB
-    if len(input_content) >= 6400:
+    # Roughly above 10KB / 300 lines
+    if len(input_content) >= 10000 or len(lines) >= 300:
         return False
 
     invalid_lines = 0
     valid_lines = 0
 
-    lines = input_content.splitlines()
     for line in lines:
         if not len(line):
             continue
