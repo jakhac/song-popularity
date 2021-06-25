@@ -176,7 +176,12 @@ def valid_lyrics(lyrics: str) -> str:
         (bool): True if lyrics are valid, else False
     """
     # type string?
-    if lyrics is None or not isinstance(lyrics, str):
+    if (
+        lyrics is None
+        or not isinstance(lyrics, str)
+        or len(lyrics) < 10
+        or len(lyrics) > 10000
+    ):
         return False
 
     # lang english?
@@ -223,8 +228,7 @@ def content_is_lyrics(input_content: str):
     """
     lines = input_content.splitlines()
 
-    # Roughly above 10KB / 300 lines
-    if len(input_content) >= 10000 or len(lines) >= 300:
+    if len(lines) >= 300:
         return False
 
     invalid_lines = 0

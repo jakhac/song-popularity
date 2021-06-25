@@ -140,7 +140,8 @@ def get_song_list(cnx: sqlite3.Connection, cursor: sqlite3.Cursor) -> List[List[
         INNER JOIN track_status AS ts ON t.id == ts.song_id
         WHERE ts.song_valid == 1
         AND ts.lyrics_skipped == 0
-        AND ts.lyrics_stored == 0;
+        AND ts.lyrics_stored == 0
+        AND t.release_year >= 2019;
     """
 
     try:
@@ -189,4 +190,5 @@ def run_lyrics_getter() -> None:
         store_lyrics_to_txt(song_list[i][0], lyrics)
         db.update_song_status(cnx, cursor, song_list[i][0], lyrics_stored=1)
 
-    log.info(f"Store lyrics for song_id {song_list[i][0]} ({song_list[i][1]}).")
+    log.info("Finished lyrics scraping.")
+    print("Finished lyrics scraping.")
