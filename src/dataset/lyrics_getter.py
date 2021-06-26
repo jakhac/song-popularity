@@ -11,7 +11,7 @@ import sys
 import lyricsgenius as api
 
 from ..database import db_interface as db
-from ..dataset.preprocessing import valid_lyrics, clean_lyrics
+from ..dataset.preprocessing import content_is_lyrics, valid_lyrics, clean_lyrics
 
 
 log = logging.getLogger("lyrics")
@@ -25,7 +25,7 @@ def connect_to_api() -> None:
     global genius
     log.info("Connecting to Genius API...")
     try:
-        genius = api.Genius(os.getenv("GENIUS_ACCESS_TOKEN"))
+        genius = api.Genius(os.getenv("GENIUS_ACCESS_TOKEN"), verbose=False)
     except Exception as err:
         log.critical(f"Failed connecting to Genius API: {err}")
         log.info("Exiting...")
@@ -50,14 +50,14 @@ def get_song_lyrics(song_title: str, artist: str) -> str:
     try:
         song = genius.search_song(song_title, artist)
     except Exception as err:
-        log.error(f"Failed getting object for song {song_title}: {err}")
+        log.warning(f"Failed getting object for song {song_title}: {err}")
         raise err
 
     # get lyrics from song object
     try:
         lyrics = song.lyrics
     except Exception as err:
-        log.error(f"Failed getting lyrics for song {song_title}: {err}")
+        log.warning(f"Failed getting lyrics for song {song_title}: {err}")
         raise err
     return lyrics
 
@@ -112,21 +112,14 @@ def store_lyrics_to_txt(song_id: str, lyrics: str):
         lyrics (str): lyrics of song to store
     """
 
-    # path to target json
-    lyrics_file_path = (
-        os.getenv("DATA_PATH") + "\\datasets\\lyrics\\" + song_id + ".txt"
-    )
-
-    # skip if already stored
-    if os.path.isfile(lyrics_file_path):
-        log.info(f"Skipping lyrics for song_id {song_id}: File already exists.")
-        return
+    # This lyrics path does not exist, only non-stored songs searched
+    lyrics_path = os.getenv("DATA_PATH") + "\\datasets\\lyrics\\" + song_id + ".txt"
 
     # write lyrics into file
-    with open(lyrics_file_path, "a", encoding="utf-8") as file:
-        # file.write(str(lyrics.encode("utf-8")))
+    with open(lyrics_path, "a", encoding="utf-8") as file:
         file.write(lyrics)
-        log.info(f"Stored lyrics of song_id {song_id}")
+
+    # log.info(f"Stored lyrics of song_id {song_id}")
 
 
 def get_song_list(cnx: sqlite3.Connection, cursor: sqlite3.Cursor) -> List[List[str]]:
@@ -141,10 +134,16 @@ def get_song_list(cnx: sqlite3.Connection, cursor: sqlite3.Cursor) -> List[List[
     """
 
     query = """
-        SELECT tf.id, tf.name, artists.name
-        FROM tracks_filtered AS tf
-        INNER JOIN artists ON tf.primary_artist_id == artists.id;
+        SELECT t.id, t.name, a.name
+        FROM tracks AS t
+        INNER JOIN artists AS a ON t.primary_artist_id == a.id
+        INNER JOIN track_status AS ts ON t.id == ts.song_id
+        WHERE ts.song_valid == 1
+        AND ts.lyrics_skipped == 0
+        AND ts.lyrics_stored == 0
+        AND t.release_year >= 2019;
     """
+
     try:
         cursor.execute(query)
         cnx.commit()
@@ -156,58 +155,40 @@ def get_song_list(cnx: sqlite3.Connection, cursor: sqlite3.Cursor) -> List[List[
     return results
 
 
-def signal_handler(sig, frame):
-    """Signal handler for CTRL + C. Store all current songs to json and exit script.
-
-    Args:
-        sig : signal
-        frame : frame
-    """
-    signal.signal(sig, signal.SIG_IGN)
-    log.critical("Abort run_lyrics_getter script.")
-    # lyrics_dict_to_json("abort_" + "{:%Y-%m-%d_%H-%M-%S}".format(datetime.now()))
-    sys.exit(0)
-
-
-def run_lyrics_getter(file_name: str) -> None:
-    """Get lyrics for all tracks in spotfiy_ds and store them in .json file.
-
-    Args:
-        file_name (str): name of the .json file
-    """
-
-    # Set handler functinon for ctrl+c signal
-    signal.signal(signal.SIGINT, signal_handler)
-
-    # if os.path.exists(os.getenv("DATA_PATH") + "\\datasets\lyrics\\" + file_name):
-    #     log.critical(f"Failed getting lyrics: file {file_name} already exists.")
-    #     exit(1)
+def run_lyrics_getter() -> None:
+    """Get lyrics for all tracks in spotfiy_ds and store them in .json file."""
 
     connect_to_api()
-    cnx, cursor = db.connect_to_db("spotify_ds_filtered")  # temporary hardcoded db name
+    cnx, cursor = db.connect_to_db("spotify_ds")
 
     # query db to get list of all (song_id, song_name, artist) tuples
     song_list = get_song_list(cnx, cursor)
+    len_songs = len(song_list)
 
-    for song in song_list:
-        # if lyrics already stored
-        # if song[0] in lyrics_dict:
-        #     log.info(f"Skipping song {song}, lyrics already stored.")
-        #     continue
+    for i in range(0, len(song_list)):
+
+        if i % 100 == 0:
+            print(f"Song: {i}/{len_songs}")
 
         try:
-            lyrics = get_song_lyrics(song[1], song[2])
+            lyrics = get_song_lyrics(song_list[i][1], song_list[i][2])
         except Exception:
-            log.warning(f"Skipping song {song}, no lyrics found.")
+            log.warning(f"Skipping song {song_list[i][1]}, no lyrics found.")
+            db.update_song_status(cnx, cursor, song_list[i][0], lyrics_skipped=1)
             continue
 
         if not valid_lyrics(lyrics):
-            log.info(f"Skipping song {song[1]}: invalid lyrics")
+            log.warning(f"Skipping song {song_list[i][1]}: invalid lyrics")
+            db.update_song_status(cnx, cursor, song_list[i][0], lyrics_skipped=1)
             continue
 
         lyrics = clean_lyrics(lyrics)
-        store_lyrics_to_txt(song[0], lyrics)
-        # store_song_lyrics_in_dict(song[0], lyrics)
 
-    # store in -> \data\datasets\lyrics\file_name.json
-    # lyrics_dict_to_json(file_name)
+        log.info(f"Store lyrics for song_id {song_list[i][0]} ({song_list[i][1]}).")
+        print(f"Store lyrics for song_id {song_list[i][0]} ({song_list[i][1]}).")
+
+        store_lyrics_to_txt(song_list[i][0], lyrics)
+        db.update_song_status(cnx, cursor, song_list[i][0], lyrics_stored=1)
+
+    log.info("Finished lyrics scraping.")
+    print("Finished lyrics scraping.")

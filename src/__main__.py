@@ -49,12 +49,8 @@ def main():
         log.info("Calling script 'connect_to_api'")
         connect_to_api()
     elif script == "run_lyrics_getter":
-        if len(args) != 0:
-            log.info(f"Calling script 'run_lyrics_getter' with argument '{args[0]}'")
-            run_lyrics_getter(str(args[0]))
-        else:
-            log.info("Calling script 'run_lyrics_getter'")
-            run_lyrics_getter()
+        log.info("Calling script 'run_lyrics_getter'")
+        run_lyrics_getter()
     elif script == "read_artists_csv":
         log.info(f"Calling script 'read_artists_csv' with argument '{args[0]}'")
         read_artists_csv(str(args[0]))

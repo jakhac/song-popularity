@@ -48,6 +48,19 @@ TABLES[
         FOREIGN KEY (primary_artist_id) REFERENCES artists(id)
     );
     """
+
+TABLES[
+    "track_status"
+] = """CREATE TABLE track_status
+        (
+                song_id TEXT,
+                song_valid BOOL,
+                lyrics_skipped BOOL,
+                lyrics_stored BOOL,
+                PRIMARY KEY (song_id),
+                FOREIGN KEY (song_id) REFERENCES tracks(id)
+        );"""
+
 TABLES[
     "genres"
 ] = """CREATE TABLE genres 

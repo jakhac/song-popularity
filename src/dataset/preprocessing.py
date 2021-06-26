@@ -1,10 +1,11 @@
 import logging
 import re
-from typing import List, Optional, Tuple
-
+import logging
 from langdetect import detect
 
 from ..database import db_interface as db
+
+from typing import List, Optional, Tuple
 
 log = logging.getLogger("preprocessing")
 
@@ -59,6 +60,112 @@ def process_artist_row(artist_row: List[str]) -> Optional[Tuple[List[str], List[
     return (artist_row, genres)
 
 
+def filter_tracks():
+    """Filter tracks from db.tracks table and add them to track_status table."""
+    cnx, cursor = db.connect_to_db("spotify_ds")
+
+    # Get list of artists with modern songs
+    artists_query = """
+        SELECT DISTINCT artists.id
+        FROM artists 
+        INNER JOIN tracks ON artists.id == tracks.primary_artist_id
+        WHERE tracks.release_year >= 2000;
+    """
+
+    song_query = """
+        SELECT *
+        FROM tracks
+        WHERE tracks.release_year >= 2000
+        AND tracks.primary_artist_id == (?)
+        ORDER BY LENGTH(tracks.name) ASC;
+    """
+
+    cursor.execute(artists_query)
+    artist_id_list = cursor.fetchall()
+    len_artists = len(artist_id_list)
+    print("Length artists ", len_artists)
+
+    # For every artist that has released after 2000...
+    for i in range(0, len_artists):
+        # ... get song list with artist id
+        cursor.execute(song_query, artist_id_list[i])
+        song_name_list = cursor.fetchall()
+
+        # Filter similar songs, keep highest popularity
+        distinct_songs = filter_similar_song_names(song_name_list)
+
+        # [print(s[:3]) for s in song_name_list]
+        # print("Filtered list")
+        # [print(d[:3]) for d in distinct_songs]
+        # print()
+        # print()
+
+        # Add most popular distinct songs into new table
+        for d in distinct_songs:
+            try:
+                # insert into filter table
+                db.insert_song_status([d[0], 1, 0, 0], cnx, cursor)
+            except Exception as err:
+                log.warning(f"Skipping track with id {d[0]} due to error: {err}")
+
+        # Info every 100 artists
+        if i % 100 == 0:
+            print(f"Processed artists: {i}/{len(artist_id_list)}")
+            log.info(f"Processed artists: {i}/{len(artist_id_list)}")
+
+    log.info("Finished processing artists.")
+
+
+def filter_similar_song_names(track_rows: List[List[str]]) -> List[List[str]]:
+    """Filter a list of track_rows. Group similar starting song names and
+    choose the one with highest popularity among them.
+
+    Args:
+        track_row (List[List[str]]): the track_rows to be filtered
+
+    Returns:
+        List[List[str]]: the filtered list of track_rows
+    """
+    best_indices = []
+    skip_indices = []
+
+    # For every track ...
+    for i in range(0, len(track_rows)):
+
+        # skip songs which are already considered due to similarity to a previous song
+        if i in skip_indices:
+            continue
+
+        # Current song is supposed to be the best
+        best_idx = i
+        best_pop = track_rows[i][2]
+
+        # For all songs ...
+        j = i + 1
+        while j < len(track_rows):
+            if j in skip_indices:
+                j += 1
+                continue
+
+            # ... and similar song name
+            if track_rows[i][1] in track_rows[j][1]:
+                # Always invalidate, as this song is considered now
+                skip_indices.append(j)
+
+                # Look for highest popularity among similar songs
+                if best_pop < track_rows[j][2]:
+                    best_pop = track_rows[j][2]
+                    best_idx = j
+
+            j += 1
+
+        # Append index with best popularity
+        best_indices.append(best_idx)
+
+    # Add entries of best indices
+    return [track_rows[i] for i in best_indices]
+
+
 def valid_lyrics(lyrics: str) -> str:
     """Check if lyrics are valid. Valid lyrics are from type str and english.
 
@@ -69,11 +176,27 @@ def valid_lyrics(lyrics: str) -> str:
         (bool): True if lyrics are valid, else False
     """
     # type string?
-    if not isinstance(lyrics, str):
+    if (
+        lyrics is None
+        or not isinstance(lyrics, str)
+        or len(lyrics) < 10
+        or len(lyrics) > 10000
+    ):
         return False
 
     # lang english?
-    if detect(lyrics) != "en":
+    lang = ""
+    try:
+        lang = detect(lyrics)
+    except Exception as err:
+        log.error(f'Failed to detect language of "{lyrics[:10]}" due to error {err}')
+        return False
+
+    if lang != "en":
+        return False
+
+    # string is lyrics (not list of artists, novel, ..)
+    if not content_is_lyrics(lyrics):
         return False
 
     return True
@@ -94,103 +217,6 @@ def clean_lyrics(lyrics: str) -> str:
     return re.sub(pattern, str.replace, str(lyrics))
 
 
-def filter_tracks():
-    """Filter tracks from db.tracks table and store them in tracks_filtered table."""
-    cnx, cursor = db.connect_to_db("spotify_ds_filtered")
-
-    # Get list of artists with modern songs
-    artists_query = """
-        SELECT DISTINCT artists.id
-        FROM artists 
-        INNER JOIN tracks ON artists.id == tracks.primary_artist_id
-        WHERE tracks.release_year >= 2000;
-    """
-
-    song_query = """
-        SELECT *
-        FROM tracks
-        WHERE tracks.release_year >= 2000
-        AND tracks.primary_artist_id == ?
-        ORDER BY LENGTH(tracks.popularity) DESC;
-    """
-
-    cursor.execute(artists_query)
-    artist_id_list = cursor.fetchall()
-    len_artists = len(artist_id_list)
-
-    # For every artist that has released after 2000...
-    for i in range(0, len_artists):
-        # ... get song list with artist id
-        cursor.execute(song_query, artist_id_list[i])
-        song_name_list = cursor.fetchall()
-
-        # Filter similar songs, keep highest popularity
-        distinct_songs = filter_similar_song_names(song_name_list)
-
-        # [print(s) for s in song_name_list]
-        # print("Filtered list")
-        # [print(d) for d in distinct_songs]
-        # print()
-        # print()
-
-        # Add most popular distinct songs into new table
-        for d in distinct_songs:
-            try:
-                db.insert_filtered_track(d, cnx, cursor)
-            except Exception as err:
-                log.warning(f"Skipping track with id {d[0]} due to error: {err}")
-
-        # Info every 100 artists
-        if i % 100 == 0.0:
-            print(f"Processed artists: {i}/{len(artist_id_list)}")
-            log.info(f"Processed artists: {i}/{len(artist_id_list)}")
-
-    log.info("Finished processing artists.")
-
-
-def filter_similar_song_names(track_rows: List[List[str]]) -> List[List[str]]:
-    """Filter a list of track_rows. Group similar starting song names and
-    choose the one with highest popularity among them.
-
-    Args:
-        track_row (List[List[str]]): the track_rows to be filtered
-
-    Returns:
-        List[List[str]]: the filtered list of track_rows
-    """
-    # Contains the tuples of distinct song_names with maximal popularity
-    distinct_rows = []
-
-    # Flag is set to true, if in cur_row "%name%" is already distinct rows
-    found_match = False
-
-    # Longest strings are considered first.
-    for cur_row in track_rows:
-
-        # Try to insert current row into list of distinct rows
-        # All long strings (e.g. containing .feat) are inserted first
-        for i in range(0, len(distinct_rows)):
-            found_match = False
-
-            # If current row is already in distinct_rows, replace entry if popularity can be
-            # improved. Later entries can still improve replacements, because strings ordered
-            # decreasing in length.
-            if cur_row[1] in distinct_rows[i][1]:
-                found_match = True
-
-                # Popularity of similar song can be improved
-                if cur_row[2] > distinct_rows[i][2]:
-                    distinct_rows[i] = cur_row
-
-                break
-
-        # Name of cur_row does not exist in distinct_rows yet
-        if not found_match:
-            distinct_rows.append(cur_row)
-
-    return distinct_rows
-
-
 def content_is_lyrics(input_content: str):
     """Checks if the input content is lyrics and not some kind of enumeration.
 
@@ -200,24 +226,24 @@ def content_is_lyrics(input_content: str):
     Returns:
         bool: True, if the content is lyrics, otherwise False
     """
-    if input_content is None or not isinstance(input_content, str):
-        return False
-
     lines = input_content.splitlines()
 
-    if lines >= 300:
+    if len(lines) >= 300:
         return False
 
     invalid_lines = 0
     valid_lines = 0
 
     for line in lines:
-        if "-" in line:
+        if not len(line):
+            continue
+
+        if "-" in line or "--" in line or "–" in line:
             invalid_lines += 1
         elif "Psalms" in line:
             return False
         else:
-            # if lines does not contain '-'
+            # if lines does not contain '-' or similar
             valid_lines += 1
 
         # checked at most 19 lines in each file
