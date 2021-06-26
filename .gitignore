@@ -16,6 +16,8 @@ logs/
 data/datasets/spotify/*.csv
 # database binaries
 data/databases/binaries/*.db
+# lyrics files
+data/datasets/lyrics/*
 
 
 # Distribution / packaging
