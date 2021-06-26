@@ -195,7 +195,7 @@ def content_is_lyrics(input_content: str):
     """Checks if the input content is lyrics and not some kind of enumeration.
 
     Args:
-        input_lyrics (str): the content to be checked
+        input_content (str): the content to be checked
 
     Returns:
         bool: True, if the content is lyrics, otherwise False
