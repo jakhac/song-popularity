@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 from .database.db_backup import dump_db, load_db_dump
 from .database.db_setup import create_db
+from .dataset.lyrics_values import run_lyrics_scorer
 from .dataset.lyrics_getter import connect_to_api, run_lyrics_getter
 from .dataset.preprocessing import filter_tracks
 from .dataset.spotify_ds_reader import read_artists_csv, read_tracks_csv
@@ -15,7 +16,7 @@ from .training.music_features import train
 
 load_dotenv()
 
-logging.config.dictConfig(LOGGING_CONFIG)
+# logging.config.dictConfig(LOGGING_CONFIG)
 
 
 def main():
@@ -82,6 +83,9 @@ def main():
     elif script == "train":
         log.info(f"Calling script 'train'")
         train()
+    elif script == "run_lyrics_scorer":
+        log.info("Calling script 'run_lyrics_scorer'.")
+        run_lyrics_scorer()
     else:
         log.critical(f"Unknown script '{script}', exiting program.")
         exit(1)

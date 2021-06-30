@@ -9,10 +9,17 @@ import signal
 import sys
 
 import lyricsgenius as api
+from pathlib import Path
 
 from ..database import db_interface as db
 from ..dataset.preprocessing import content_is_lyrics, valid_lyrics, clean_lyrics
 
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+LYRICS_PATH = Path(os.getenv("DATA_PATH")) / "datasets" / "lyrics"
 
 log = logging.getLogger("lyrics")
 
@@ -146,11 +153,44 @@ def get_song_list(cnx: sqlite3.Connection, cursor: sqlite3.Cursor) -> List[List[
 
     try:
         cursor.execute(query)
-        cnx.commit()
         results = cursor.fetchall()
     except sqlite3.Error as err:
         log.error(f"Failed to query all songs in table tracks: {err}")
-        cnx.rollback()
+        raise err
+    return results
+
+
+def get_unscored_songs(
+    cnx: sqlite3.Connection, cursor: sqlite3.Cursor
+) -> List[List[str]]:
+    """Query db and return for list of (song_id, song_name, song_artist) tuples,
+    which are not scored in lyrics_scores yet.
+
+    Args:
+        cnx (sqlite3.Connection): the connection to the db
+        cursor (sqlite3.Cursor): the cursor of the db
+
+    Raises:
+        Error: unknown error during sql query execution
+    """
+
+    query = """
+        SELECT song_id
+        FROM track_status 
+        WHERE song_valid == 1
+        AND lyrics_stored == 1
+        AND NOT EXISTS (
+            SELECT * 
+            FROM lyrics_scores AS ls
+            WHERE ls.song_id=song_id
+        );
+    """
+
+    try:
+        cursor.execute(query)
+        results = list(map(lambda x: x[0], cursor.fetchall()))
+    except sqlite3.Error as err:
+        log.error(f"Failed to query all songs in table tracks: {err}")
         raise err
     return results
 
@@ -192,3 +232,27 @@ def run_lyrics_getter() -> None:
 
     log.info("Finished lyrics scraping.")
     print("Finished lyrics scraping.")
+
+
+def get_lyrics_from_file(song_id: str) -> str:
+    """Get lyrics for song_id from dataset folder.
+
+    Args:
+        song_id (str): id of the song
+
+    Raises:
+        Exception: error while opening/reading file
+
+    Returns:
+        (str): lyrics of song
+    """
+    lyrics_file_path = LYRICS_PATH / "{song_id}.txt"
+    lyrics = None
+
+    with open(lyrics_file_path, "r") as f:
+        lyrics = f.read()
+
+    if lyrics is not None:
+        return lyrics
+    else:
+        raise Exception(f"Failed reading lyrics file for song {song_id}")

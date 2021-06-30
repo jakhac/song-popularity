@@ -241,5 +241,26 @@ def insert_artist_genres(
             continue
 
 
-def insert_lyric_scores(lyric_scores: List[str], cursor: sqlite3.Cursor):
-    pass
+def insert_lyric_scores(
+    song_id: str,
+    lyric_scores: List[float],
+    cnx: sqlite3.Connection,
+    cursor: sqlite3.Cursor,
+):
+    query = """
+        INSERT OR REPLACE INTO lyrics_scores
+        VALUES(?, ?, ?, ?);
+    """
+
+    if len(lyric_scores) != 4:
+        log.error("Skip lyric_scores: Length does not equal 4.")
+        return
+
+    try:
+        cursor.execute(query, [song_id].concat(lyric_scores))
+        cnx.commit()
+        log.info(f"Inserted lyrics scores for song {song_id}")
+    except sqlite3.Error as err:
+        log.error(f"Failed inserting lyrics scores for song {song_id}: {err}")
+        cnx.rollback()
+        raise err

@@ -1,110 +1,136 @@
 import logging
 import math
+import statistics
 import sys
 
-# from ..database import db_interface as db
+from typing import List
 
-# log = logging.getLogger("lyrics")
+from ..database import db_interface as db
+from .lyrics_getter import get_unscored_songs, get_lyrics_from_file
 
-
-def score_lyrics():
-    # word cnt
-
-    lyrics = """Giving praise to mother nature Aten, Atun, Neteru
-    Praise to my people who traveled here from Nibiru
-    Praise to Nuwaubians the one they callin' the widows
-    Praise the graves, raise us universal pharaohs'
-    Giving praise to mother nature Aten, Atun, Neteru
-    Praise to my people who traveled here from Nibiru
-    Praise to Nuwaubians the one they callin' the widows
-    Praise the graves, raise us universal pharaohs'
-    Praise the graves, raise us universal pharaohs'
-    Praise the graves, raise us universal pharaohs'
-    """
-    word_count = count_words(lyrics)
-    # diversity
-
-    # repetition
-    rep_score = repetition(lyrics)
-    print(rep_score)
-    # more features?
-
-    # insert into db
-    pass
+log = logging.getLogger("lyrics")
 
 
-def repetition(lyrics: str) -> int:
-    n = 5
-    rep_score = 0
-    lst = list(filter(None, lyrics.split(" ")))
-    print(lst)
-    for i in range(1, n + 1):
-        rep_score += calc_tuple_reps(lst, i) * math.exp(-0.1 * i)
-    rep_score /= n
-    if rep_score > 1:
-        # log.critical("Formula is not working. Score > 1.")
-        exit(1)
-    return rep_score
+def run_lyrics_scorer():
+    log.info("Running lyrics scorer...")
+    cnx, cursor = db.connect_to_db("spotify_ds")
+    song_list = get_unscored_songs(cnx, cursor)  # (song_id, song_name, artist_name)
+    print(song_list)
+    return
+    log.info(f"Attempting to get lyrics for {len(song_list)} songs")
+    skipped_songs = []
+    processed_songs = 0
 
+    for song in song_list:
+        processed_songs += 1
+        if processed_songs % 100 == 0:
+            print(f"Song: {processed_songs}/{len(song_list)}")
 
-def calc_tuple_reps(lyrics_split: str, i: int):
+        try:
+            lyrics = get_lyrics_from_file(song[0])
+        except Exception as err:
+            log.error(f"Failed getting lyrics file for song {song[0]}: {err}")
+            log.info(f"Skipping lyrics for song {song[0]}")
+            skipped_songs.append(song[0])
+            continue
 
-    tpls = []
-    for j in range(0, len(lyrics_split) - i + 1):
-        tpls.append(" ".join(lyrics_split[j : i + j]))
+        try:
+            lyric_scores = score_lyrics(lyrics)
+        except Exception as err:
+            log.error(f"Failed inserting lyrics scores for song {song[0]}: {err}")
+            skipped_songs.append(song[0])
+            continue
 
-    len_tpls = len(tpls)
-    print(len_tpls)
-    uniq_tpls = list(set(tpls))
+        if lyric_scores is None:
+            log.info(f"Skipping empty lyrics for song {song[0]}")
+            skipped_songs.append(song[0])
+            continue
 
-    return (
-        sum(filter(lambda n: n > 1, list(map(lambda x: tpls.count(x), uniq_tpls))))
-        / len_tpls
+        try:
+            db.insert_lyric_scores(song[0], lyric_scores, cnx, cursor)
+        except Exception as err:
+            log.error(f"Failed inserting lyrics scores for song {song[0]}: {err}")
+            skipped_songs.append(song[0])
+            continue
+
+    log.info(
+        f"Skipped {len(skipped_songs)} out of {len(song_list)} songs: {skipped_songs}"
     )
+    log.info("Lyrics scorer completed")
 
 
-def count_words(lyrics: str) -> int:
-    """Computes the number of words for a given lyrics.
+def score_lyrics(lyrics: str) -> List[float]:
+    """Computes the scores for a given lyrics.
 
     Args:
-        lyrics (str): the given lyrics
-
-    Raises:
-        TypeError: lyrics not instance of str
+        lyrics (List[str]): the given lyrics
 
     Returns:
-        int: # words
+        List[float]: (word_count, rep_score, div_score)
     """
-    try:
-        count = len(lyrics.split(" "))
-        return count
-    except TypeError as err:
-        # log.error(f"TypeError while computing word count: {err}")
-        raise err
+    if not isinstance(lyrics, str):
+        log.error("Lyrics not of type string, skipping")
+        return
+
+    lyrics = (
+        lyrics.replace(",", " ")
+        .replace("(", " ")
+        .replace(")", " ")
+        .replace("\n", " ")
+        .lower()
+    )
+
+    lyrics_split = list(filter(None, lyrics.split(" ")))
+
+    if not lyrics_split:
+        log.warning("Empty list, skipping lyrics")
+        return
+
+    word_count = len(lyrics_split)
+    print("word_count()=", word_count)
+
+    rep_score = repetition_score(lyrics_split)
+    print("repetition_score()=", rep_score)
+
+    div_score = diversity_score(lyrics_split)
+    print("diversity_score()=", div_score)
+
+    return [word_count, rep_score, div_score]
 
 
-def word_diversity(lyrics: str) -> float:
+def repetition_score(lyrics_split: List[str]) -> float:
+    """Computes the reptition score for a given lyrics.
+
+    Args:
+        lyrics (List[str]): the given lyrics
+
+    Returns:
+        float: repetition score in [0,1]
+    """
+    return sum(
+        [n for n in [lyrics_split.count(x) for x in set(lyrics_split)] if n > 1]
+    ) / len(lyrics_split)
+
+
+def diversity_score(lyrics_split: List[str]) -> float:
     """Computes the amount of different words for a given lyrics.
 
     Args:
-        lyrics (str): the given lyrics
-
-    Raises:
-        TypeError: lyrics not instance of str
-        ZeroDivisionError: word count for lyrics is zero
+        lyrics (List[str]): the given lyrics
 
     Returns:
         float: word diversity ratio: # different words/# words
     """
-    try:
-        diversity = len(set(lyrics.split(" "))) / count_words(lyrics)
-        return diversity
-    except TypeError as err:
-        # log.error(f"TypeError while computing word diversity: {err}")
-        raise err
-    except ZeroDivisionError as zero:
-        # log.error("ZeroDivisionError while computing word diversity: word count is 0.")
-        raise zero
+    return len(set(lyrics_split)) / len(lyrics_split)
 
 
-score_lyrics()
+# score_lyrics()
+bts = """Euphoria
+Take my hands now
+You are the cause of my euphoria
+Oh yeah, yeah, yeah, yeah, yeah, yeah (Oh)
+Oh yeah, yeah, yeah, yeah, yeah, yeah (Euphoria)
+Oh yeah, yeah, yeah, yeah, yeah, yeah
+Close the door now
+When I'm with you, I'm in utopia
+"""

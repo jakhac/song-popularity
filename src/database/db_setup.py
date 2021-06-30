@@ -89,7 +89,7 @@ TABLES[
         song_id TEXT,
         word_count INT,
         diversity REAL,
-        repition REAL,
+        repetition REAL,
         PRIMARY KEY (song_id),
         FOREIGN KEY (song_id) REFERENCES tracks(id)
     );
