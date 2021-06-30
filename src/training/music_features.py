@@ -10,7 +10,9 @@ from sklearn.model_selection import train_test_split
 
 # import models
 from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
+from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 
 from ..database import db_interface as db
@@ -80,6 +82,8 @@ def train():
         {"name": "Neural Network", "function": MLPClassifier},
         {"name": "Decision Trees", "function": DecisionTreeClassifier},
         {"name": "Random Forest", "function": RandomForestClassifier},
+        {"name": "SVC", "function": SVC},
+        {"name": "KNeighborsClassifier", "function": KNeighborsClassifier},
     ]
 
     # use each model and calculate accuracy
