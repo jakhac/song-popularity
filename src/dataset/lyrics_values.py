@@ -13,44 +13,44 @@ log = logging.getLogger("lyrics")
 
 def run_lyrics_scorer():
     log.info("Running lyrics scorer...")
+
     cnx, cursor = db.connect_to_db("spotify_ds")
-    song_list = get_unscored_songs(cnx, cursor)  # (song_id, song_name, artist_name)
-    print(song_list)
-    return
+    song_list = get_unscored_songs(cnx, cursor)
+
     log.info(f"Attempting to get lyrics for {len(song_list)} songs")
     skipped_songs = []
     processed_songs = 0
 
-    for song in song_list:
+    for song_id in song_list:
         processed_songs += 1
         if processed_songs % 100 == 0:
-            print(f"Song: {processed_songs}/{len(song_list)}")
+            log.info(f"Song: {processed_songs}/{len(song_list)}")
 
         try:
-            lyrics = get_lyrics_from_file(song[0])
+            lyrics = get_lyrics_from_file(song_id)
         except Exception as err:
-            log.error(f"Failed getting lyrics file for song {song[0]}: {err}")
-            log.info(f"Skipping lyrics for song {song[0]}")
-            skipped_songs.append(song[0])
+            log.error(f"Failed getting lyrics file for song {song_id}: {err}")
+            log.info(f"Skipping lyrics for song {song_id}")
+            skipped_songs.append(song_id)
             continue
 
         try:
             lyric_scores = score_lyrics(lyrics)
         except Exception as err:
-            log.error(f"Failed inserting lyrics scores for song {song[0]}: {err}")
-            skipped_songs.append(song[0])
+            log.error(f"Failed inserting lyrics scores for song {song_id}: {err}")
+            skipped_songs.append(song_id)
             continue
 
         if lyric_scores is None:
-            log.info(f"Skipping empty lyrics for song {song[0]}")
-            skipped_songs.append(song[0])
+            log.info(f"Skipping empty lyrics for song {song_id}")
+            skipped_songs.append(song_id)
             continue
 
         try:
-            db.insert_lyric_scores(song[0], lyric_scores, cnx, cursor)
+            db.insert_lyric_scores(song_id, lyric_scores, cnx, cursor)
         except Exception as err:
-            log.error(f"Failed inserting lyrics scores for song {song[0]}: {err}")
-            skipped_songs.append(song[0])
+            log.error(f"Failed inserting lyrics scores for song {song_id}: {err}")
+            skipped_songs.append(song_id)
             continue
 
     log.info(
@@ -87,13 +87,13 @@ def score_lyrics(lyrics: str) -> List[float]:
         return
 
     word_count = len(lyrics_split)
-    print("word_count()=", word_count)
+    # print("word_count()=", word_count)
 
     rep_score = repetition_score(lyrics_split)
-    print("repetition_score()=", rep_score)
+    # print("repetition_score()=", rep_score)
 
     div_score = diversity_score(lyrics_split)
-    print("diversity_score()=", div_score)
+    # print("diversity_score()=", div_score)
 
     return [word_count, rep_score, div_score]
 

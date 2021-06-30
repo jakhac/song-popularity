@@ -160,11 +160,9 @@ def get_song_list(cnx: sqlite3.Connection, cursor: sqlite3.Cursor) -> List[List[
     return results
 
 
-def get_unscored_songs(
-    cnx: sqlite3.Connection, cursor: sqlite3.Cursor
-) -> List[List[str]]:
+def get_unscored_songs(cnx: sqlite3.Connection, cursor: sqlite3.Cursor) -> List[str]:
     """Query db and return for list of (song_id, song_name, song_artist) tuples,
-    which are not scored in lyrics_scores yet.
+    which are not scored in lyric_scores yet.
 
     Args:
         cnx (sqlite3.Connection): the connection to the db
@@ -172,18 +170,18 @@ def get_unscored_songs(
 
     Raises:
         Error: unknown error during sql query execution
+
+    Return:
+        List[str]: list of song ids
     """
 
     query = """
-        SELECT song_id
-        FROM track_status 
-        WHERE song_valid == 1
-        AND lyrics_stored == 1
-        AND NOT EXISTS (
-            SELECT * 
-            FROM lyrics_scores AS ls
-            WHERE ls.song_id=song_id
-        );
+        SELECT ts.song_id
+        FROM track_status AS ts
+        LEFT JOIN lyric_scores AS ls ON ls.song_id = ts.song_id
+        WHERE ls.song_id IS NULL 
+        AND ts.song_valid == 1
+        AND ts.lyrics_stored == 1;
     """
 
     try:
@@ -196,7 +194,7 @@ def get_unscored_songs(
 
 
 def run_lyrics_getter() -> None:
-    """Get lyrics for all tracks in spotfiy_ds and store them in .json file."""
+    """Get lyrics for all tracks in spotfiy_ds and store them in .txt file."""
 
     connect_to_api()
     cnx, cursor = db.connect_to_db("spotify_ds")
@@ -208,7 +206,7 @@ def run_lyrics_getter() -> None:
     for i in range(0, len(song_list)):
 
         if i % 100 == 0:
-            print(f"Song: {i}/{len_songs}")
+            log.info(f"Song: {i}/{len_songs}")
 
         try:
             lyrics = get_song_lyrics(song_list[i][1], song_list[i][2])
@@ -225,13 +223,11 @@ def run_lyrics_getter() -> None:
         lyrics = clean_lyrics(lyrics)
 
         log.info(f"Store lyrics for song_id {song_list[i][0]} ({song_list[i][1]}).")
-        print(f"Store lyrics for song_id {song_list[i][0]} ({song_list[i][1]}).")
 
         store_lyrics_to_txt(song_list[i][0], lyrics)
         db.update_song_status(cnx, cursor, song_list[i][0], lyrics_stored=1)
 
     log.info("Finished lyrics scraping.")
-    print("Finished lyrics scraping.")
 
 
 def get_lyrics_from_file(song_id: str) -> str:
@@ -246,10 +242,9 @@ def get_lyrics_from_file(song_id: str) -> str:
     Returns:
         (str): lyrics of song
     """
-    lyrics_file_path = LYRICS_PATH / "{song_id}.txt"
-    lyrics = None
+    lyrics_file_path = LYRICS_PATH / (song_id + ".txt")
 
-    with open(lyrics_file_path, "r") as f:
+    with open(lyrics_file_path, "r", encoding="utf-8") as f:
         lyrics = f.read()
 
     if lyrics is not None:

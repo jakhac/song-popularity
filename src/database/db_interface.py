@@ -248,16 +248,16 @@ def insert_lyric_scores(
     cursor: sqlite3.Cursor,
 ):
     query = """
-        INSERT OR REPLACE INTO lyrics_scores
+        INSERT INTO lyric_scores
         VALUES(?, ?, ?, ?);
     """
 
-    if len(lyric_scores) != 4:
-        log.error("Skip lyric_scores: Length does not equal 4.")
+    if len(lyric_scores) != 3:
+        log.error("Skip lyric_scores: length does not equal 3.")
         return
 
     try:
-        cursor.execute(query, [song_id].concat(lyric_scores))
+        cursor.execute(query, [song_id] + lyric_scores)
         cnx.commit()
         log.info(f"Inserted lyrics scores for song {song_id}")
     except sqlite3.Error as err:

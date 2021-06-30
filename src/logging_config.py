@@ -9,7 +9,7 @@ LOGGING_CONFIG = {
     },
     "handlers": {
         "console": {
-            "level": "ERROR",
+            "level": "INFO",
             "class": "logging.StreamHandler",
             "formatter": "basic",
             "stream": "ext://sys.stdout",
