@@ -45,7 +45,7 @@ def create_classes(popularities: List[int]) -> List[int]:
     """Scale popularity into classes in [0, 10].
 
     Args:
-        popularities (List[int]): List of popularity scores in [0, 100]
+        popularities (List[int]): List of popularity scores in [0, 10]
 
     Returns:
         List[int]: List of popularity scores in [0, 10]

@@ -1,12 +1,8 @@
 import logging
-import math
-import statistics
-import sys
-
 from typing import List
 
 from ..database import db_interface as db
-from .lyrics_getter import get_unscored_songs, get_lyrics_from_file
+from .lyrics_getter import get_lyrics_from_file, get_unscored_songs
 
 log = logging.getLogger("lyrics")
 
