@@ -13,6 +13,7 @@ from .dataset.preprocessing import filter_tracks
 from .dataset.spotify_ds_reader import read_artists_csv, read_tracks_csv
 from .logging_config import LOGGING_CONFIG
 from .training.music_features import train
+from .training.artist_features import train_artists
 
 load_dotenv()
 
@@ -86,6 +87,10 @@ def main():
     elif script == "run_lyrics_scorer":
         log.info("Calling script 'run_lyrics_scorer'.")
         run_lyrics_scorer()
+    elif script == "train_artists":
+        log.info("Calling script 'train_artists'.")
+        train_artists()
+
     else:
         log.critical(f"Unknown script '{script}', exiting program.")
         exit(1)
