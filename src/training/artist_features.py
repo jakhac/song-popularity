@@ -1,11 +1,25 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+import os
+import sys
+from pathlib import Path
 from typing import List
 
 import numpy as np
 import pandas as pd
-from pandas.core.frame import DataFrame
-from sklearn.ensemble import RandomForestClassifier
+from dotenv import load_dotenv
 
-# import metrics
+load_dotenv()
+
+DATA_PATH = Path(os.getenv("DATA_PATH"))
+
+# only for .ipynb because relative imports don't work
+root_path = DATA_PATH.parent
+os.chdir(str(root_path))
+
+import src.database.db_interface as db
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from sklearn.model_selection import train_test_split
 
@@ -13,31 +27,35 @@ from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import OrdinalEncoder
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 
-from ..database import db_interface as db
-
-meta_genres = [
-    "alternative",
-    "blues",
-    "classical",
-    "country",
-    "dance",
-    "electronic",
-    "folk",
-    "pop",
-    "hip hop",
-    "rap",
-    "jazz",
-    "latin",
-    "r&b",
-    "reggae",
-    "rock",
-    "metal",
-    "world",
-    "other",
-]
+meta_genres = dict(
+    enumerate(
+        [
+            "alternative",
+            "blues",
+            "classical",
+            "country",
+            "dance",
+            "electronic",
+            "folk",
+            "pop",
+            "hip hop",
+            "rap",
+            "jazz",
+            "latin",
+            "r&b",
+            "reggae",
+            "rock",
+            "metal",
+            "world",
+            "other",
+        ]
+    )
+)
+print(meta_genres)
 
 
 def load_data():
@@ -58,82 +76,125 @@ def load_data():
         GROUP BY a.id;
     """
 
-    df = pd.read_sql_query(query, cnx)
-
-    return df
+    return pd.read_sql_query(query, cnx)
 
 
-# def create_classes(popularities: List[int]) -> List[int]:
-#     """Scale popularity into classes in [0, 10].
-
-#     Args:
-#         popularities (List[int]): List of popularity scores in [0, 100]
-
-#     Returns:
-#         List[int]: List of popularity scores in [0, 10]
-#     """
-
-#     return [int(x / 10) for x in popularities]
-
-
-# def create_genre_classes(df: DataFrame) -> DataFrame:
-#     """Put classes in meta genres.
-
-#     Args:
-#         df (DataFrame): DataFrame of artists
-
-#     Returns:
-#         df (DataFrame): DataFrame of artists
-#     """
-#     for index, row in df.iterrows():
-
-#         # check if genre can be classified by meta genre
-#         new_genre = "other"
-#         for g in meta_genres:
-#             if g in row[0]:
-#                 new_genre = g
-#                 break
-
-#         df.at[index, "genre_name"] = new_genre
-
-#     return df
-
-
-def apply_genres(genre: List[int]) -> List[int]:
-    new_genre = "other"
+def apply_genres(genre: str) -> int:
+    new_genre = 17
 
     for g in meta_genres:
-        if g in genre:
+        if meta_genres[g] in genre:
             new_genre = g
             break
 
     return new_genre
 
 
-def train_artists():
-    """Train artists dataset."""
+def calculate_metrics(clf, X_test, y_test):
+    # predict on test set
+    y_predict = clf.predict(X_test)
 
-    df = load_data()
-
-    # Scale followers to [0, 10]
-    max_followers = df["followers"].max()
-    df["followers"] = df["followers"].apply(lambda x: int(x / (max_followers / 10)))
-
-    # Use meta genres
-    df["genre_name"] = df["genre_name"].apply(apply_genres)
-
-    # Scale popularity
-    y = df["popularity"].apply(lambda x: int(x / 10))
-    X = df.values[:, :2]
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
+    # print metrics
+    print("Accuracy: " + str(round(accuracy_score(y_test, y_predict), 4)))
+    print("F1: " + str(round(f1_score(y_test, y_predict, average="weighted"), 4)))
+    print(
+        "Recall: " + str(round(recall_score(y_test, y_predict, average="weighted"), 4))
     )
+    print(
+        "Precision: "
+        + str(round(precision_score(y_test, y_predict, average="weighted"), 4))
+    )
+    print("\n")
 
-    print(X_train)
-    print(y_train)
+    # check which labels do not appear in prediction
+    print(f"Contained predictions: {set(y_predict)}")
+    print(f"Contained tests: {set(y_test)}")
+    set(y_test) - set(y_predict)
 
-    # print(X_train.shape)
-    # print(X_test.shape)
 
-    return
+df = load_data()
+
+# Scale followers to [0, 10]
+max_followers = df["followers"].max()
+df["followers"] = df["followers"].apply(lambda x: int(x / (max_followers / 10)))
+
+# Use meta genres
+df["genre_name"] = df["genre_name"].apply(apply_genres)
+
+# Scale popularity
+y = df["popularity"].apply(lambda x: int(x / 10))
+X = df.values[:, :2]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+print(X_train.shape)
+print(X_test.shape)
+print(df)
+
+
+print("Gaussian Naive Bayes")
+gaussian_clf = GaussianNB()
+
+# fit the model
+gaussian_clf.fit(X_train, y_train)
+
+calculate_metrics(gaussian_clf, X_test, y_test)
+
+
+print("SVC")
+svc_clf = SVC()
+
+# fit the model
+svc_clf.fit(X_train, y_train)
+
+calculate_metrics(svc_clf, X_test, y_test)
+
+
+# ## Neural Network
+
+
+print("Neural Network")
+nn_clf = MLPClassifier()
+
+# fit the model
+nn_clf.fit(X_train, y_train)
+
+calculate_metrics(nn_clf, X_test, y_test)
+
+
+print("K-Neighbours Classifier")
+knn_clf = KNeighborsClassifier()
+
+# fit the model
+knn_clf.fit(X_train, y_train)
+
+calculate_metrics(knn_clf, X_test, y_test)
+
+
+print("Decision Trees")
+dt_clf = DecisionTreeClassifier()
+
+# fit the model
+dt_clf.fit(X_train, y_train)
+
+calculate_metrics(dt_clf, X_test, y_test)
+
+
+# use different number of trees in forest (comparing different hyperparameters)
+forest_size = [10, 20, 50, 100]
+
+# set seed for random state to get compareable results in every execution (forest randomness)
+np.random.seed(500)
+
+for trees in forest_size:
+    # set forest size
+    print("Predicting with forest size " + str(trees))
+    rf = RandomForestClassifier(n_estimators=trees)
+
+    # fit the model
+    rf.fit(X_train, y_train)
+
+    calculate_metrics(rf, X_test, y_test)
+    print("--------\n")
