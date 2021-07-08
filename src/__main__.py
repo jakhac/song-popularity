@@ -67,7 +67,7 @@ def main():
             dump_db(str(args[0]))
         else:
             log.critical("No arguments specified for script 'dump_db'")
-    elif script == "load_db":
+    elif script == "load_db_dump":
         if len(args) != 0:
             log.info(f"Calling script 'load_db' with argument '{args[0]}'")
             load_db_dump(str(args[0]))

@@ -137,6 +137,33 @@ def update_song_status(
         log.info(f"Updated track status with id {song_id}")
 
 
+def update_generation(
+    cnx: sqlite3.Connection, cursor: sqlite3.Cursor, song_id: str, gen: int
+):
+    """Updates generation of track_status entry.
+
+    Args:
+        cnx (sqlite3.Connection): the connection to the db
+        cursor (sqlite3.Cursor): the cursor of the db
+        song_id (str): id of the song
+        gen (int): generation
+    """
+    query = f"""
+        UPDATE track_status
+        SET generation = {gen}
+        WHERE song_id == "{song_id}";
+    """
+
+    try:
+        cursor.execute(query)
+        cnx.commit()
+    except sqlite3.Error as err:
+        log.error(f"Failed updating generation with song id {song_id}: {err}")
+        cnx.rollback()
+        # TODO raise err
+    log.info(f"Updated generation from song id {song_id}")
+
+
 def insert_artist(row: List, cnx: sqlite3.Connection, cursor: sqlite3.Cursor):
     """Inserts a new artist and if necessary new genres into the db.
 

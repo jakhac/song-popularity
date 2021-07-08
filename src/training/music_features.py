@@ -31,7 +31,7 @@ def load_data():
         FROM tracks AS t
         INNER JOIN track_status AS ts
         ON t.id == ts.song_id
-        WHERE ts.song_valid == 1
+        WHERE ts.generation == 1
         AND ts.lyrics_stored == 1
         AND t.release_year >= 2000;
     """
