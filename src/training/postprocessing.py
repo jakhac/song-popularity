@@ -2,6 +2,8 @@ import pickle
 import os
 from dotenv import load_dotenv
 from pathlib import Path
+from typing import List
+import pandas as pd
 
 from sklearn import model_selection
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
@@ -54,3 +56,11 @@ def get_metrics(clf, X_test, y_test):
     metrics += f"Contained tests: {set(y_test)}" + "\n"
 
     return metrics
+
+
+def print_metrics(clf, X_test, y_test):
+    print(get_metrics(clf, X_test, y_test))
+
+
+def count_distribution(data: List[int]) -> List[int]:
+    return list(pd.DataFrame(data).value_counts(sort=False))
