@@ -1,8 +1,5 @@
-import logging
 import os
-import sqlite3
 from datetime import datetime
-from posixpath import split
 from sqlite3.dbapi2 import connect
 
 from .db_interface import connect_to_db
@@ -37,7 +34,7 @@ def dump_db(db_name: str):
 
 
 def load_db_dump(db_name: str):
-    """Loads the most recent database dump for the specifed database.
+    """Loads the most recent database dump for the specified database.
 
     Args:
         db_name (str): the name of the database

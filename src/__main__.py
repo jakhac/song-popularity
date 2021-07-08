@@ -7,13 +7,14 @@ from dotenv import load_dotenv
 
 from .database.db_backup import dump_db, load_db_dump
 from .database.db_setup import create_db
-from .dataset.lyrics_values import run_lyrics_scorer
 from .dataset.lyrics_getter import connect_to_api, run_lyrics_getter
+from .dataset.lyrics_values import run_lyrics_scorer
 from .dataset.preprocessing import filter_tracks
 from .dataset.spotify_ds_reader import read_artists_csv, read_tracks_csv
 from .logging_config import LOGGING_CONFIG
 from .training.music_features import train
-from .training.artist_features import train_artists
+
+# from .training.artist_features import train_artists
 
 load_dotenv()
 
