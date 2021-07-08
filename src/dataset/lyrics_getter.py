@@ -140,15 +140,75 @@ def get_song_list(cnx: sqlite3.Connection, cursor: sqlite3.Cursor) -> List[List[
         Error: unknown error during sql query execution
     """
 
+    # query = """
+    #     SELECT t.id, t.name, a.name
+    #     FROM tracks AS t
+    #     INNER JOIN artists AS a ON t.primary_artist_id == a.id
+    #     INNER JOIN track_status AS ts ON t.id == ts.song_id
+    #     WHERE ts.generation == 1
+    #     AND ts.lyrics_skipped == 0
+    #     AND ts.lyrics_stored == 0
+    #     AND t.release_year >= 2019;
+    # """
     query = """
-        SELECT t.id, t.name, a.name
-        FROM tracks AS t
-        INNER JOIN artists AS a ON t.primary_artist_id == a.id
-        INNER JOIN track_status AS ts ON t.id == ts.song_id
-        WHERE ts.song_valid == 1
-        AND ts.lyrics_skipped == 0
-        AND ts.lyrics_stored == 0
-        AND t.release_year >= 2019;
+    SELECT *
+    FROM (
+        SELECT * FROM
+        (
+            SELECT t.id, t.name, a.name
+            FROM tracks AS t
+            INNER JOIN artists AS a ON t.primary_artist_id == a.id
+            INNER JOIN track_status AS ts ON t.id == ts.song_id
+            WHERE ts.generation == 1
+            AND ts.lyrics_skipped == 0
+            AND ts.lyrics_stored == 0
+            AND t.release_year >= 2000
+            AND 0 <= t.popularity AND t.popularity < 20
+            LIMIT 600
+        )
+        UNION
+        SELECT * FROM
+        (
+            SELECT t.id, t.name, a.name
+            FROM tracks AS t
+            INNER JOIN artists AS a ON t.primary_artist_id == a.id
+            INNER JOIN track_status AS ts ON t.id == ts.song_id
+            WHERE ts.generation == 1
+            AND ts.lyrics_skipped == 0
+            AND ts.lyrics_stored == 0
+            AND t.release_year >= 2000
+            AND 20 <= t.popularity AND t.popularity < 40
+            LIMIT 600
+        )
+        UNION
+        SELECT * FROM
+        (
+            SELECT t.id, t.name, a.name
+            FROM tracks AS t
+            INNER JOIN artists AS a ON t.primary_artist_id == a.id
+            INNER JOIN track_status AS ts ON t.id == ts.song_id
+            WHERE ts.generation == 1
+            AND ts.lyrics_skipped == 0
+            AND ts.lyrics_stored == 0
+            AND t.release_year >= 2000
+            AND 40 <= t.popularity AND t.popularity < 60
+            LIMIT 600
+        )
+        UNION
+        SELECT * FROM
+        (
+            SELECT t.id, t.name, a.name
+            FROM tracks AS t
+            INNER JOIN artists AS a ON t.primary_artist_id == a.id
+            INNER JOIN track_status AS ts ON t.id == ts.song_id
+            WHERE ts.generation == 1
+            AND ts.lyrics_skipped == 0
+            AND ts.lyrics_stored == 0
+            AND t.release_year >= 2000
+            AND 80 <= t.popularity AND t.popularity < 100
+            LIMIT 600
+        )
+    );
     """
 
     try:
@@ -179,8 +239,8 @@ def get_unscored_songs(cnx: sqlite3.Connection, cursor: sqlite3.Cursor) -> List[
         SELECT ts.song_id
         FROM track_status AS ts
         LEFT JOIN lyric_scores AS ls ON ls.song_id = ts.song_id
-        WHERE ls.song_id IS NULL 
-        AND ts.song_valid == 1
+        WHERE ls.song_id IS NULL
+        AND ts.generation == 1
         AND ts.lyrics_stored == 1;
     """
 
@@ -207,6 +267,9 @@ def run_lyrics_getter() -> None:
 
         if i % 100 == 0:
             log.info(f"Song: {i}/{len_songs}")
+
+        # for every new song update gen to 2
+        db.update_generation(cnx, cursor, song_list[i][0], 2)
 
         try:
             lyrics = get_song_lyrics(song_list[i][1], song_list[i][2])
