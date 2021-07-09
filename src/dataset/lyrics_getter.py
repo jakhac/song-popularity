@@ -151,24 +151,8 @@ def get_song_list(cnx: sqlite3.Connection, cursor: sqlite3.Cursor) -> List[List[
     #     AND t.release_year >= 2019;
     # """
     query = """
-    SELECT *
-    FROM (
-        SELECT * FROM
-        (
-            SELECT t.id, t.name, a.name
-            FROM tracks AS t
-            INNER JOIN artists AS a ON t.primary_artist_id == a.id
-            INNER JOIN track_status AS ts ON t.id == ts.song_id
-            WHERE ts.generation == 1
-            AND ts.lyrics_skipped == 0
-            AND ts.lyrics_stored == 0
-            AND t.release_year >= 2000
-            AND 0 <= t.popularity AND t.popularity < 20
-            LIMIT 600
-        )
-        UNION
-        SELECT * FROM
-        (
+    SELECT * FROM
+    (
             SELECT t.id, t.name, a.name
             FROM tracks AS t
             INNER JOIN artists AS a ON t.primary_artist_id == a.id
@@ -178,37 +162,8 @@ def get_song_list(cnx: sqlite3.Connection, cursor: sqlite3.Cursor) -> List[List[
             AND ts.lyrics_stored == 0
             AND t.release_year >= 2000
             AND 20 <= t.popularity AND t.popularity < 40
-            LIMIT 600
-        )
-        UNION
-        SELECT * FROM
-        (
-            SELECT t.id, t.name, a.name
-            FROM tracks AS t
-            INNER JOIN artists AS a ON t.primary_artist_id == a.id
-            INNER JOIN track_status AS ts ON t.id == ts.song_id
-            WHERE ts.generation == 1
-            AND ts.lyrics_skipped == 0
-            AND ts.lyrics_stored == 0
-            AND t.release_year >= 2000
-            AND 40 <= t.popularity AND t.popularity < 60
-            LIMIT 600
-        )
-        UNION
-        SELECT * FROM
-        (
-            SELECT t.id, t.name, a.name
-            FROM tracks AS t
-            INNER JOIN artists AS a ON t.primary_artist_id == a.id
-            INNER JOIN track_status AS ts ON t.id == ts.song_id
-            WHERE ts.generation == 1
-            AND ts.lyrics_skipped == 0
-            AND ts.lyrics_stored == 0
-            AND t.release_year >= 2000
-            AND 80 <= t.popularity AND t.popularity < 100
-            LIMIT 600
-        )
-    );
+            LIMIT 1000
+    )
     """
 
     try:

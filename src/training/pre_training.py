@@ -79,7 +79,7 @@ def get_music_df():
         FROM tracks AS t
         INNER JOIN track_status AS ts
         ON t.id == ts.song_id
-        WHERE ts.generation == 1
+        WHERE ts.generation >= 1
         AND ts.lyrics_stored == 1
         AND t.release_year >= 2000;
     """
@@ -98,4 +98,19 @@ def encode_genres(genre: str) -> int:
     return new_genre
 
 
-# sample_distribution
+# 1 = [0,19], 2 = [20,39], 3 = [40,59], 4 = [60, 79], 5 = [80, 100]
+def encode_popularity(x: int) -> int:
+    if x < 20:
+        return 1
+    elif x < 40:
+        return 2
+    elif x < 60:
+        return 3
+    elif x < 80:
+        return 4
+    else:
+        return 5
+
+
+def scale_popularity(x: int) -> int:
+    return int(x / 10)
