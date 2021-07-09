@@ -6,7 +6,10 @@ from typing import Any, Callable, Dict, List, Tuple
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from dotenv import load_dotenv
+from matplotlib import axes
 from sklearn.metrics._plot.confusion_matrix import plot_confusion_matrix
+
+from .postprocessing import get_metrics
 
 load_dotenv()
 
@@ -20,6 +23,15 @@ def disp_scatter(
     y_label: str = None,
     plot_name: str = None,
 ):
+    """Displays a scatter plot.
+
+    Args:
+        x (any): list of data for x-axis
+        y (any): list of data for y-axis data
+        x_label (str, optional): label for x-axis. Defaults to None.
+        y_label (str, optional): label for y-axis. Defaults to None.
+        plot_name (str, optional): title of plot. Defaults to None.
+    """
     plt.title(plot_name)
     plt.xlabel(x_label)
     plt.ylabel(y_label)
@@ -58,34 +70,37 @@ def plots_from_list(
         # specify target file
         target_file = model_dir / (title + ".jpg")
         if target_file.is_file():
-            raise ValueError(f"PDF with name {title} already exists.")
+            raise ValueError(f"File with name {title} already exists.")
 
     # create plot
-    fig = plt.figure(figsize=(12, (len(plots) * 3)))
+    fig = plt.figure(figsize=(cols * 6, (len(plots) * 3)))
     fig.suptitle(title, fontsize=15)
 
-    # add text
-    ax = fig.add_subplot(2, 1, 1)
+    #  add text
+    ax = fig.add_subplot(cols, 1, 1)
     ax.text(x=0.05, y=0.9, s=(text), wrap=True)
     plt.axis("off")
 
     # map list on subplots
-    for idx, plot_data in enumerate(plots, start=3):
-        # print(2 + int(math.ceil((len(plots) / 2))), cols, idx)
-        ax = fig.add_subplot(2 + int(math.ceil((len(plots) / 2))), cols, idx)
+    for idx, plot_data in enumerate(plots, start=(cols + 1)):
+        ax = fig.add_subplot(cols + int(math.ceil((len(plots) / cols))), cols, idx)
         ax.set_xlabel(plot_data[2])
         ax.set_ylabel(plot_data[3])
         ax.set_title(plot_data[4])
 
         # for confusion matrix, add axis to arguments
         fun = plot_data[0]
-        # print(fun)
 
-        if fun.__name__ == "plot_confusion_matrix":
+        if fun != "text" and fun.__name__ == "plot_confusion_matrix":
             plot_data[1]["ax"] = ax
 
-        # call plot function at [0] with arguments in dict at [1]
-        plot_data[0](**plot_data[1])
+        if fun == "text":
+            # call text function of axis with arguments in dict at [1]
+            ax.text(**plot_data[1])
+            plt.axis("off")
+        else:
+            # call plot function at [0] with arguments in dict at [1]
+            plot_data[0](**plot_data[1])
 
     # spacing between plots
     fig.tight_layout()
@@ -104,12 +119,35 @@ def generate_model_plots(
     clf_list: List[any],
     clf_annotations: List[str] = None,
 ):
-    plt_list = []
+    """Generates a list confusion matrices for the classifiers in `clf_list`.
 
-    # get predictions
-    y_predictions = list(map(lambda clf: clf.predict(X_test), clf_list))
+    Args:
+        X_test (List[any]): test data samples
+        y_test (List[any]): test data classes
+        clf_list (List[any]): list of classifiers
+        clf_annotations (List[str], optional): TODO. Defaults to None.
 
-    # add confusion matrices
+    Returns:
+        List[Tuple[Callable, Dict[str, Any]]: list of plots
+    """
+
+    # metrics
+    metrics_list = list(map(lambda clf: (get_metrics(clf, X_test, y_test)), clf_list))
+
+    text_plots = list(
+        map(
+            lambda txt: (
+                "text",
+                {"x": 0.05, "y": 0.4, "s": txt, "wrap": True},
+                None,
+                None,
+                None,
+            ),
+            metrics_list,
+        )
+    )
+
+    # confusion matrices
     cf_matrices = list(
         map(
             lambda clf: (
@@ -122,13 +160,35 @@ def generate_model_plots(
                     "normalize": None,
                     "values_format": ".2f",
                 },
-                "Title",
                 None,
                 None,
+                str(clf),
             ),
             clf_list,
         )
     )
-    plt_list += cf_matrices
 
-    return plt_list
+    # normalized confusion matrices
+    cf_matrices_norm = list(
+        map(
+            lambda clf: (
+                plot_confusion_matrix,
+                {
+                    "estimator": clf,
+                    "X": X_test,
+                    "y_true": y_test,
+                    "cmap": plt.cm.Blues,
+                    "normalize": "true",
+                    "values_format": ".2f",
+                },
+                None,
+                None,
+                str(clf),
+            ),
+            clf_list,
+        )
+    )
+
+    # zip for final list to be ordered: text, cf_matrix, cf_matrix_norm
+    zipped_plots = zip(text_plots, cf_matrices, cf_matrices_norm)
+    return [plot for tpl in zipped_plots for plot in tpl]

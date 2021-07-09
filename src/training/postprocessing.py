@@ -1,14 +1,13 @@
-import pickle
 import os
-from dotenv import load_dotenv
+import pickle
 from pathlib import Path
 from typing import List
-import pandas as pd
-
-from sklearn import model_selection
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 
 import matplotlib.pyplot as plt
+import pandas as pd
+from dotenv import load_dotenv
+from sklearn import model_selection
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 
 load_dotenv()
 DATA_PATH = os.getenv("DATA_PATH")
@@ -36,25 +35,28 @@ def get_metrics(clf, X_test, y_test):
     metrics = ""
 
     # print metrics
-    metrics += "Accuracy: " + str(round(accuracy_score(y_test, y_predict), 4)) + "\n"
     metrics += (
-        "F1: " + str(round(f1_score(y_test, y_predict, average="weighted"), 4)) + "\n"
+        "Weighted accuracy: " + str(round(accuracy_score(y_test, y_predict), 4)) + "\n"
     )
     metrics += (
-        "Recall: "
+        "Weighted f1: "
+        + str(round(f1_score(y_test, y_predict, average="weighted"), 4))
+        + "\n"
+    )
+    metrics += (
+        "Weighted recall: "
         + str(round(recall_score(y_test, y_predict, average="weighted"), 4))
         + "\n"
     )
     metrics += (
-        "Precision: "
+        "Weighted precision: "
         + str(round(precision_score(y_test, y_predict, average="weighted"), 4))
-        + "\n\n"
+        + "\n"
     )
 
     # check which labels do not appear in prediction
-    metrics += f"Contained predictions: {set(y_predict)}" + "\n"
-    metrics += f"Contained tests: {set(y_test)}" + "\n"
-
+    metrics += f"Contained classes in prediction: {set(y_predict)}" + "\n"
+    metrics += f"Contained classes in test: {set(y_test)}"
     return metrics
 
 
