@@ -56,30 +56,30 @@ def plots_from_list(
             model_dir.mkdir(parents=True, exist_ok=True)
 
         # specify target file
-        target_file = model_dir / (title + ".pdf")
+        target_file = model_dir / (title + ".jpg")
         if target_file.is_file():
             raise ValueError(f"PDF with name {title} already exists.")
 
     # create plot
-    fig = plt.figure(figsize=(2 * (len(plots)), 3 + (len(plots) * 3)))
+    fig = plt.figure(figsize=(12, (len(plots) * 3)))
     fig.suptitle(title, fontsize=15)
 
     # add text
-    fig.add_subplot(1, 1, 1)
-    plt.gca().invert_yaxis()
-    plt.figtext(x=0.05, y=0.8, s=(text), wrap=True)
+    ax = fig.add_subplot(2, 1, 1)
+    ax.text(x=0.05, y=0.9, s=(text), wrap=True)
     plt.axis("off")
 
     # map list on subplots
     for idx, plot_data in enumerate(plots, start=3):
-        ax = fig.add_subplot(2 + int(math.ceil((len(plot_data) / 2))), cols, idx)
+        # print(2 + int(math.ceil((len(plots) / 2))), cols, idx)
+        ax = fig.add_subplot(2 + int(math.ceil((len(plots) / 2))), cols, idx)
         ax.set_xlabel(plot_data[2])
         ax.set_ylabel(plot_data[3])
         ax.set_title(plot_data[4])
 
         # for confusion matrix, add axis to arguments
         fun = plot_data[0]
-        print(fun)
+        # print(fun)
 
         if fun.__name__ == "plot_confusion_matrix":
             plot_data[1]["ax"] = ax
