@@ -195,7 +195,7 @@ def get_unscored_songs(cnx: sqlite3.Connection, cursor: sqlite3.Cursor) -> List[
         FROM track_status AS ts
         LEFT JOIN lyric_scores AS ls ON ls.song_id = ts.song_id
         WHERE ls.song_id IS NULL
-        AND ts.generation == 1
+        AND ts.generation >= 1
         AND ts.lyrics_stored == 1;
     """
 
