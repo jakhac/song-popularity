@@ -1,3 +1,4 @@
+import math
 import os
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Tuple
@@ -5,6 +6,7 @@ from typing import Any, Callable, Dict, List, Tuple
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from dotenv import load_dotenv
+from sklearn.metrics._plot.confusion_matrix import plot_confusion_matrix
 
 load_dotenv()
 
@@ -31,6 +33,7 @@ def plots_from_list(
     title: str,
     model_type: str = None,
     save: bool = False,
+    cols: int = 2,
 ):
     """Create a figure from a list of plots. Stored as pdf if save is True.
 
@@ -38,8 +41,9 @@ def plots_from_list(
         text (str): information to be printed on top of the pdf
         plots (List[Tuple[Callable, Dict[str, Any], str, str, str]]): list of tuples: (plot function, plot function arguments, xlabel, ylabel, title)
         title (str): name of the pdf file
-        model_type (str): music, artist or lyrics; parent folder of pdf
-        save (bool): true to save file
+        model_type (str, optional): name of parent folder for pdf. Defaults to None.
+        save (bool, optional): true to save file. Defaults to False.
+        cols (int, optional): number of columns of generated figure. Defaults to 2.
 
     Raises:
         ValueError: pdf with `file_name` already exists
@@ -57,21 +61,28 @@ def plots_from_list(
             raise ValueError(f"PDF with name {title} already exists.")
 
     # create plot
-    fig = plt.figure(figsize=(12, 3 + (len(plots) * 3)))
+    fig = plt.figure(figsize=(2 * (len(plots)), 3 + (len(plots) * 3)))
     fig.suptitle(title, fontsize=15)
 
     # add text
     fig.add_subplot(1, 1, 1)
     plt.gca().invert_yaxis()
-    plt.figtext(x=0.05, y=0.8, s=(metrics), wrap=True)
+    plt.figtext(x=0.05, y=0.8, s=(text), wrap=True)
     plt.axis("off")
 
     # map list on subplots
     for idx, plot_data in enumerate(plots, start=3):
-        ax = fig.add_subplot(int(len(plot_data) / 2) + 1, 2, idx)
+        ax = fig.add_subplot(2 + int(math.ceil((len(plot_data) / 2))), cols, idx)
         ax.set_xlabel(plot_data[2])
         ax.set_ylabel(plot_data[3])
         ax.set_title(plot_data[4])
+
+        # for confusion matrix, add axis to arguments
+        fun = plot_data[0]
+        print(fun)
+
+        if fun.__name__ == "plot_confusion_matrix":
+            plot_data[1]["ax"] = ax
 
         # call plot function at [0] with arguments in dict at [1]
         plot_data[0](**plot_data[1])
@@ -85,3 +96,39 @@ def plots_from_list(
         fig.savefig(target_file)
     else:
         plt.show()
+
+
+def generate_model_plots(
+    X_test: List[any],
+    y_test: List[any],
+    clf_list: List[any],
+    clf_annotations: List[str] = None,
+):
+    plt_list = []
+
+    # get predictions
+    y_predictions = list(map(lambda clf: clf.predict(X_test), clf_list))
+
+    # add confusion matrices
+    cf_matrices = list(
+        map(
+            lambda clf: (
+                plot_confusion_matrix,
+                {
+                    "estimator": clf,
+                    "X": X_test,
+                    "y_true": y_test,
+                    "cmap": plt.cm.Blues,
+                    "normalize": None,
+                    "values_format": ".2f",
+                },
+                "Title",
+                None,
+                None,
+            ),
+            clf_list,
+        )
+    )
+    plt_list += cf_matrices
+
+    return plt_list
