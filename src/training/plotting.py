@@ -26,35 +26,39 @@ def disp_scatter(
 
 
 def plots_from_list(
-    metrics: str,
+    text: str,
     plots: List[Tuple[Callable, Dict[str, Any], str, str, str]],
-    model_type: str,
-    file_name: str,
+    title: str,
+    model_type: str = None,
+    save: bool = False,
 ):
-    """Create a figure from a list of plots and stores it as pdf.
+    """Create a figure from a list of plots. Stored as pdf if save is True.
 
     Args:
-        metrics (str): information to be printed on top of the pdf
+        text (str): information to be printed on top of the pdf
         plots (List[Tuple[Callable, Dict[str, Any], str, str, str]]): list of tuples: (plot function, plot function arguments, xlabel, ylabel, title)
+        title (str): name of the pdf file
         model_type (str): music, artist or lyrics; parent folder of pdf
-        file_name (str): name of the pdf file
+        save (bool): true to save file
 
     Raises:
         ValueError: pdf with `file_name` already exists
     """
-    # get or create target directoy
-    model_dir = Path(DATA_PATH) / "models" / model_type
-    if not model_dir.is_dir():
-        model_dir.mkdir(parents=True, exist_ok=True)
 
-    # specify target file
-    target_file = model_dir / (file_name + ".pdf")
-    if target_file.is_file():
-        raise ValueError(f"PDF with name {file_name} already exists.")
+    if save:
+        # get or create target directoy
+        model_dir = Path(DATA_PATH) / "models" / model_type
+        if not model_dir.is_dir():
+            model_dir.mkdir(parents=True, exist_ok=True)
+
+        # specify target file
+        target_file = model_dir / (title + ".pdf")
+        if target_file.is_file():
+            raise ValueError(f"PDF with name {title} already exists.")
 
     # create plot
     fig = plt.figure(figsize=(12, 3 + (len(plots) * 3)))
-    fig.suptitle(file_name, fontsize=15)
+    fig.suptitle(title, fontsize=15)
 
     # add text
     fig.add_subplot(1, 1, 1)
@@ -75,6 +79,9 @@ def plots_from_list(
     # spacing between plots
     fig.tight_layout()
 
-    # Different backend that does not show plots to user
-    mpl.use("Agg")
-    fig.savefig(target_file)
+    if save:
+        # Different backend that does not show plots to user
+        mpl.use("Agg")
+        fig.savefig(target_file)
+    else:
+        plt.show()
