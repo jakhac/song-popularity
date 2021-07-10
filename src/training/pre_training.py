@@ -87,6 +87,28 @@ def get_music_df():
     return pd.read_sql_query(query, cnx)
 
 
+def get_complete_df():
+    """Loads data from the database into a dataframe
+
+    Returns:
+        dataframe: the pd dataframe of the musical features
+    """
+    cnx, cursor = db.connect_to_db("spotify_ds")
+
+    query = """
+        SELECT *
+        FROM tracks t
+        INNER JOIN track_status AS ts ON t.id == ts.song_id
+        INNER JOIN lyric_scores AS ls ON t.id == ls.song_id
+        INNER JOIN artists AS a ON t.primary_artist_id == a.id
+        WHERE ts.generation >= 1
+        AND ts.lyrics_stored == 1
+        AND t.release_year >= 2000;
+    """
+
+    return pd.read_sql_query(query, cnx)
+
+
 def encode_genres(genre: str) -> int:
     new_genre = 17
 
@@ -100,6 +122,8 @@ def encode_genres(genre: str) -> int:
 
 # 1 = [0,19], 2 = [20,39], 3 = [40,59], 4 = [60, 79], 5 = [80, 100]
 def encode_popularity(x: int) -> int:
+    return 1 if x >= 50 else 0
+
     if x < 20:
         return 1
     elif x < 40:
