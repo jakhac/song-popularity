@@ -40,25 +40,31 @@ def disp_scatter(
 
 
 def plots_from_list(
-    text: str,
-    plots: List[Tuple[Callable, Dict[str, Any], str, str, str]],
     title: str,
+    plots: List[Tuple[Callable, Dict[str, Any], str, str, str]],
     model_type: str = None,
+    text: str = None,
     save: bool = False,
     cols: int = 2,
 ):
     """Create a figure from a list of plots. Stored as pdf if save is True.
 
     Args:
-        text (str): information to be printed on top of the pdf
-        plots (List[Tuple[Callable, Dict[str, Any], str, str, str]]): list of tuples: (plot function, plot function arguments, xlabel, ylabel, title)
-        title (str): name of the pdf file
+        title (str): title on the document + file name
+
+        plots (List[Tuple[Callable, Dict[str, Any], str, str, str]]): list of tuples:
+            (plot function, plot function arguments, title, xlabel, ylabel)
+
+        text (str): information to be printed on top of the document. Defaults to None.
+
         model_type (str, optional): name of parent folder for pdf. Defaults to None.
+
         save (bool, optional): true to save file. Defaults to False.
+
         cols (int, optional): number of columns of generated figure. Defaults to 2.
 
     Raises:
-        ValueError: pdf with `file_name` already exists
+        ValueError: File with `file_name` already exists
     """
 
     if save:
@@ -77,16 +83,17 @@ def plots_from_list(
     fig.suptitle(title, fontsize=15)
 
     #  add text
-    ax = fig.add_subplot(cols, 1, 1)
-    ax.text(x=0.05, y=0.9, s=(text), wrap=True)
-    plt.axis("off")
+    if text:
+        ax = fig.add_subplot(cols, 1, 1)
+        ax.text(x=0.05, y=0.9, s=(text), wrap=True)
+        plt.axis("off")
 
     # map list on subplots
     for idx, plot_data in enumerate(plots, start=(cols + 1)):
         ax = fig.add_subplot(cols + int(math.ceil((len(plots) / cols))), cols, idx)
-        ax.set_xlabel(plot_data[2])
-        ax.set_ylabel(plot_data[3])
-        ax.set_title(plot_data[4])
+        ax.set_title(plot_data[2])
+        ax.set_xlabel(plot_data[3])
+        ax.set_ylabel(plot_data[4])
 
         # for confusion matrix, add axis to arguments
         fun = plot_data[0]
