@@ -82,15 +82,15 @@ def main():
     elif script == "filter_tracks":
         log.info(f"Calling script 'filter_tracks'")
         filter_tracks()
-    elif script == "train":
+    elif script == "train_music":
         log.info(f"Calling script 'train'")
         train()
     elif script == "run_lyrics_scorer":
         log.info("Calling script 'run_lyrics_scorer'.")
         run_lyrics_scorer()
-    elif script == "train_artists":
-        log.info("Calling script 'train_artists'.")
-        train_artists()
+    # elif script == "train_artists":
+    #     log.info("Calling script 'train_artists'.")
+    #     train_artists()
 
     else:
         log.critical(f"Unknown script '{script}', exiting program.")

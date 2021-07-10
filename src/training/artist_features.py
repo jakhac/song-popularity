@@ -1,11 +1,11 @@
-import pandas as pd
-import numpy as np
-
 import os
 import sys
 from pathlib import Path
-from dotenv import load_dotenv
 from typing import List
+
+import numpy as np
+import pandas as pd
+from dotenv import load_dotenv
 
 load_dotenv()
 DATA_PATH = Path(os.getenv("DATA_PATH"))
@@ -14,11 +14,11 @@ DATA_PATH = Path(os.getenv("DATA_PATH"))
 root_path = DATA_PATH.parent
 os.chdir(str(root_path))
 
-import src.training.pre_training as t
 import src.training.postprocessing as pp
-
-from imblearn.under_sampling import RandomUnderSampler
+import src.training.pre_training as t
 from imblearn.over_sampling import RandomOverSampler
+from imblearn.under_sampling import RandomUnderSampler
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import plot_confusion_matrix
 
 # sklearn imports
@@ -28,7 +28,6 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier
 
 # # Preprocessing
 
@@ -77,6 +76,8 @@ print(X_test.shape)
 
 
 # # Classification
+# store classifiers for later plotting
+clf_list = []
 
 # ## Gaussian Naive Bayes
 print("Gaussian Naive Bayes")
@@ -130,7 +131,7 @@ pp.print_metrics(dt_clf, X_test, y_test)
 
 # ## Random forest
 # use different number of trees in forest (comparing different hyperparameters)
-forest_size = [10, 20, 50, 100]
+forest_size = [10, 20, 50, 100, 250]
 
 # set seed for random state to get compareable results in every execution (forest randomness)
 np.random.seed(500)
@@ -142,6 +143,7 @@ for trees in forest_size:
 
     # fit the model
     rf.fit(X_train, y_train)
+    clf_list.append(rf)
 
     pp.print_metrics(rf, X_test, y_test)
     print("--------\n")

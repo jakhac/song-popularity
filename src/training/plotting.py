@@ -167,9 +167,9 @@ def generate_model_plots(
                     "normalize": None,
                     "values_format": ".2f",
                 },
-                None,
-                None,
                 str(clf),
+                None,
+                None,
             ),
             clf_list,
         )
@@ -188,9 +188,9 @@ def generate_model_plots(
                     "normalize": "true",
                     "values_format": ".2f",
                 },
-                None,
-                None,
                 str(clf),
+                None,
+                None,
             ),
             clf_list,
         )
