@@ -36,7 +36,7 @@ def get_artist_df():
     cnx, cursor = db.connect_to_db("spotify_ds")
 
     query = """
-        SELECT ag.genre_name, a.followers, a.popularity
+        SELECT DISTINCT ag.genre_name, a.followers, a.popularity
         FROM artists AS a
         INNER JOIN artist_genres AS ag ON a.id == ag.artist_id
         INNER JOIN tracks AS t ON t.primary_artist_id == a.id
@@ -57,7 +57,7 @@ def get_lyric_df():
     cnx, cursor = db.connect_to_db("spotify_ds")
 
     query = """
-        SELECT ls.word_count, ls.diversity, ls.repetition, t.popularity
+        SELECT DISTINCT ls.word_count, ls.diversity, ls.repetition, t.popularity
         FROM lyric_scores AS ls
         INNER JOIN tracks AS t on t.id = ls.song_id;
     """
@@ -75,7 +75,7 @@ def get_music_df():
     cnx, cursor = db.connect_to_db("spotify_ds")
 
     query = """
-        SELECT t.duration_ms, t.explict, t.release_year, t.danceability, t.energy, t.key, t.loadness, t.mode, t.speechiness, t.acousticness, t.instrumentalness, t.liveness, t.valence, t.tempo, t.time_signature, t.popularity
+        SELECT DISTINCT t.duration_ms, t.explict, t.release_year, t.danceability, t.energy, t.key, t.loadness, t.mode, t.speechiness, t.acousticness, t.instrumentalness, t.liveness, t.valence, t.tempo, t.time_signature, t.popularity
         FROM tracks AS t
         INNER JOIN track_status AS ts
         ON t.id == ts.song_id
@@ -96,14 +96,16 @@ def get_complete_df():
     cnx, cursor = db.connect_to_db("spotify_ds")
 
     query = """
-        SELECT *
+        SELECT DISTINCT *
         FROM tracks t
         INNER JOIN track_status AS ts ON t.id == ts.song_id
         INNER JOIN lyric_scores AS ls ON t.id == ls.song_id
         INNER JOIN artists AS a ON t.primary_artist_id == a.id
+        INNER JOIN artist_genres AS ag ON ag.artist_id == t.primary_artist_id
         WHERE ts.generation >= 1
         AND ts.lyrics_stored == 1
-        AND t.release_year >= 2000;
+        AND t.release_year >= 2000
+        GROUP BY t.id;
     """
 
     return pd.read_sql_query(query, cnx)
@@ -122,8 +124,6 @@ def encode_genres(genre: str) -> int:
 
 # 1 = [0,19], 2 = [20,39], 3 = [40,59], 4 = [60, 79], 5 = [80, 100]
 def encode_popularity(x: int) -> int:
-    return 1 if x >= 50 else 0
-
     if x < 20:
         return 1
     elif x < 40:
@@ -134,6 +134,10 @@ def encode_popularity(x: int) -> int:
         return 4
     else:
         return 5
+
+
+def binary_popularity(x: int) -> int:
+    return 1 if x >= 50 else 0
 
 
 def scale_popularity(x: int) -> int:
