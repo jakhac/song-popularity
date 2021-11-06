@@ -1,5 +1,5 @@
-import src.database.db_interface as db
 import pandas as pd
+import src.database.db_interface as db
 
 meta_genres = dict(
     enumerate(
@@ -111,7 +111,8 @@ def get_complete_df():
     return pd.read_sql_query(query, cnx)
 
 
-def encode_genres(genre: str) -> int:
+def encode_genre(genre: str) -> int:
+    # encode a specific genre as int
     new_genre = 17
 
     for g in meta_genres:
@@ -122,8 +123,9 @@ def encode_genres(genre: str) -> int:
     return new_genre
 
 
-# 1 = [0,19], 2 = [20,39], 3 = [40,59], 4 = [60, 79], 5 = [80, 100]
-def encode_popularity(x: int) -> int:
+def multiclass_popularity(x: int) -> int:
+    # map popularity to multiple classes :
+    # 1 = [0,19], 2 = [20,39], 3 = [40,59], 4 = [60, 79], 5 = [80, 100]
     if x < 20:
         return 1
     elif x < 40:
@@ -137,8 +139,10 @@ def encode_popularity(x: int) -> int:
 
 
 def binary_popularity(x: int) -> int:
+    # map popularity to binary classes: 0 = [0,49], 1= [50, 100]
     return 1 if x >= 50 else 0
 
 
 def scale_popularity(x: int) -> int:
+    # scale popularity from [0-100] to [0-10]
     return int(x / 10)

@@ -118,15 +118,3 @@ def diversity_score(lyrics_split: List[str]) -> float:
         float: word diversity ratio: # different words/# words
     """
     return len(set(lyrics_split)) / len(lyrics_split)
-
-
-# score_lyrics()
-bts = """Euphoria
-Take my hands now
-You are the cause of my euphoria
-Oh yeah, yeah, yeah, yeah, yeah, yeah (Oh)
-Oh yeah, yeah, yeah, yeah, yeah, yeah (Euphoria)
-Oh yeah, yeah, yeah, yeah, yeah, yeah
-Close the door now
-When I'm with you, I'm in utopia
-"""
